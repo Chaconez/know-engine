@@ -482,6 +482,14 @@ java -jar target/know-engine-1.0.0.jar
 | 员工后台 | `http://localhost:8009/staff-login.html` | 工号 `TEST001` | `123456` |
 | Druid 监控 | `http://localhost:8009/druid/` | `admin` | `admin` |
 
+根路径 `http://localhost:8009/` 会自动跳转到登录页。
+
+### 容器化部署
+
+`deploy/` 下有可直接用的 Docker 部署脚本与踩坑记录（NAS 上 host 网络必须走 `127.0.0.1`、
+中文乱码、Druid 配置层级、模型外挂等 9 项），见 [deploy/README.md](deploy/README.md)。
+脚本对模型、静态页做外挂挂载，改 HTML 不必重打 jar。
+
 ### 接口速览
 
 | 接口 | 方法 | 说明 |

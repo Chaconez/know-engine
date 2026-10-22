@@ -32,6 +32,9 @@ public class SaTokenConfig implements WebMvcConfigurer {
                     .notMatch("/auth/**")
                     .notMatch("/dingtalk/**")
                     .notMatch("/druid/**")
+                    // 根路径放行：没有扩展名，isStaticResource() 认不出来，会被误判为接口而抛
+                    // NotLoginException（表现为打开首页直接 500）。这里交给 index.html 做跳转。
+                    .notMatch("/")
                     .check(r -> {
                         if (isStaticResource()) return;
                         StpUtil.checkLogin();

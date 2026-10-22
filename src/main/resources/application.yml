@@ -17,26 +17,33 @@ spring:
     username: ${MYSQL_USERNAME:root}
     password: ${MYSQL_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
-    # druid:
-    initial-size: 5
-    min-idle: 5
-    max-active: 20
-    max-wait: 60000
-    time-between-eviction-runs-millis: 60000
-    min-evictable-idle-time-millis: 300000
-    validation-query: SELECT 1
-    test-while-idle: true
-    test-on-borrow: false
-    test-on-return: false
-    pool-prepared-statements: true
-    max-pool-prepared-statement-per-connection-size: 20
-    filters: stat,wall
-    connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
-    stat-view-servlet:
-      enabled: true
-      url-pattern: /druid/*
-      login-username: ${DRUID_USERNAME:admin}
-      login-password: ${DRUID_PASSWORD:admin}
+    # 必须嵌在 druid: 之下。druid-spring-boot-3-starter 只读 spring.datasource.druid.*，
+    # 平铺在 spring.datasource 下会被静默忽略 —— 连接池参数不生效，监控台也注册不上（/druid/ 404）。
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      filters: stat,wall
+      connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+      stat-view-servlet:
+        enabled: true
+        url-pattern: /druid/*
+        login-username: ${DRUID_USERNAME:admin}
+        login-password: ${DRUID_PASSWORD:admin}
+  web:
+    resources:
+      # 静态页面默认打在 jar 内；追加 file: 目录可实现「改 HTML 不用重新打包」。
+      # 顺序敏感：file: 在前表示磁盘覆盖 jar，未在磁盘放置的文件回落到 jar 内版本。
+      static-locations: ${STATIC_LOCATIONS:classpath:/static/}
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -170,3 +177,10 @@ qa-cache:
   min-score: 0.95
   min-frequency: 3
   reviewer-ids: ${QA_CACHE_REVIEWER_IDS:}
+
+know-engine:
+  reranker:
+    # 模型/分词器文件路径。留空则从 classpath（jar 内 resources/model/bge-reranker-model/）加载；
+    # 部署时建议外挂目录挂载，避免把 544MB 模型打进 jar。
+    model-path: ${RERANKER_MODEL_PATH:}
+    tokenizer-path: ${RERANKER_TOKENIZER_PATH:}

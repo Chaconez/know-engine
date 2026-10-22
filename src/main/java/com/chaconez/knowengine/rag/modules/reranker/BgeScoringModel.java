@@ -4,6 +4,7 @@ package com.chaconez.knowengine.rag.modules.reranker;
 import dev.langchain4j.model.scoring.onnx.OnnxScoringModel;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -52,12 +53,28 @@ public class BgeScoringModel {
     private static volatile OnnxScoringModel instance;
 
     /**
+     * 外部模型文件路径（可选）。
+     * <p>
+     * 模型 544MB，打进 jar 会让包体积翻倍且无法复用；部署时更推荐把模型放在宿主机目录挂载进容器，
+     * 通过 {@code know-engine.reranker.model-path} 指过来。留空则回退到 classpath 内的
+     * {@link #CLASSPATH_MODEL}。
+     */
+    @Value("${know-engine.reranker.model-path:}")
+    private String externalModelPath;
+
+    /**
+     * 外部 tokenizer 文件路径（可选），留空则回退到 classpath 内的 {@link #CLASSPATH_TOKENIZER}。
+     */
+    @Value("${know-engine.reranker.tokenizer-path:}")
+    private String externalTokenizerPath;
+
+    /**
      * Spring 容器启动时预加载模型，避免首次问答时触发模型加载导致延迟
      */
     @PostConstruct
     public void init() {
         if (instance == null) {
-            loadModel();
+            loadModel(externalModelPath, externalTokenizerPath);
         }
     }
 
@@ -73,7 +90,7 @@ public class BgeScoringModel {
         if (instance == null) {
             synchronized (BgeScoringModel.class) {
                 if (instance == null) {
-                    loadModel();
+                    loadModel(null, null);
                 }
             }
         }
@@ -82,13 +99,16 @@ public class BgeScoringModel {
 
     /**
      * 加载 ONNX 模型与 tokenizer，初始化 OnnxScoringModel 实例
+     *
+     * @param externalModel     外部模型文件路径，为空则使用 classpath 资源
+     * @param externalTokenizer 外部 tokenizer 文件路径，为空则使用 classpath 资源
      */
-    private static synchronized void loadModel() {
+    private static synchronized void loadModel(String externalModel, String externalTokenizer) {
         if (instance != null) {
             return;
         }
-        String modelPath = resolveClasspathToFilePath(CLASSPATH_MODEL);
-        String tokenizerPath = resolveClasspathToFilePath(CLASSPATH_TOKENIZER);
+        String modelPath = resolvePath(externalModel, CLASSPATH_MODEL);
+        String tokenizerPath = resolvePath(externalTokenizer, CLASSPATH_TOKENIZER);
 
         log.info("正在初始化 BGE-RERANKER 评分模型...");
         log.info("模型路径: {}", modelPath);
@@ -97,6 +117,24 @@ public class BgeScoringModel {
         instance = new OnnxScoringModel(modelPath, tokenizerPath, 8192);
 
         log.info("BGE-RERANKER 评分模型初始化完成");
+    }
+
+    /**
+     * 优先使用外部文件，缺失时回退到 classpath 资源
+     *
+     * @param external           外部文件路径
+     * @param classpathResource  classpath 下的资源名
+     * @return 可被 ONNX Runtime 直接读取的文件绝对路径
+     */
+    private static String resolvePath(String external, String classpathResource) {
+        if (external != null && !external.isBlank()) {
+            File file = new File(external);
+            if (file.isFile()) {
+                return file.getAbsolutePath();
+            }
+            log.warn("配置的外部文件不存在，回退 classpath 资源: {} -> {}", external, classpathResource);
+        }
+        return resolveClasspathToFilePath(classpathResource);
     }
 
     /**
