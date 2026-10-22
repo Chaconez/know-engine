@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识文档上传</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        input[type="text"],
+        input[type="file"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .file-input-wrapper {
+            position: relative;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .file-input-wrapper:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .file-icon {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .file-text {
+            color: #666;
+            font-size: 14px;
+        }
+        .file-name {
+            margin-top: 10px;
+            color: #667eea;
+            font-weight: 500;
+            word-break: break-all;
+        }
+        .upload-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .upload-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+        .upload-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .progress-container {
+            display: none;
+            margin-top: 20px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .progress-text {
+            text-align: center;
+            margin-top: 8px;
+            color: #666;
+            font-size: 14px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            display: none;
+        }
+        .result.success {
+            display: block;
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .result.error {
+            display: block;
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .result-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .result-content {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .split-form {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+        }
+        .split-form h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .split-form .form-group {
+            margin-bottom: 15px;
+        }
+        .split-form input[type="text"],
+        .split-form input[type="number"] {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .split-form input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .split-form select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: white;
+            cursor: pointer;
+        }
+        .split-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+        .split-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(40, 167, 69, 0.4);
+        }
+        .split-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .param-hint {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+        .param-group {
+            display: none;
+        }
+        .param-group.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 知识文档上传</h1>
+
+        <div style="display:flex;gap:10px;justify-content:center;margin-bottom:20px;">
+            <a href="/document.html" style="padding:8px 16px;background:#f0f4ff;color:#667eea;border-radius:8px;text-decoration:none;font-size:14px;font-weight:500;">📄 文档管理</a>
+            <a href="/chat.html" style="padding:8px 16px;background:#f0fff4;color:#28a745;border-radius:8px;text-decoration:none;font-size:14px;font-weight:500;">💬 AI 对话</a>
+        </div>
+
+        <form id="uploadForm">
+            <div class="form-group">
+                <label>选择文件 *</label>
+                <div class="file-input-wrapper" id="fileWrapper">
+                    <input type="file" id="file" name="file" required>
+                    <div class="file-icon">📁</div>
+                    <div class="file-text">点击或拖拽文件到此处</div>
+                    <div class="file-name" id="fileName"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="title">文档标题 *</label>
+                <input type="text" id="title" name="title" placeholder="请输入文档标题" required>
+            </div>
+
+            <div class="form-group">
+                <label for="description">文档描述 *</label>
+                <input type="text" id="description" name="description" placeholder="请输入文档描述" required>
+            </div>
+
+            <div class="form-group">
+                <label for="knowledgeBaseType">知识库类型 *</label>
+                <select id="knowledgeBaseType" name="knowledgeBaseType" required style="width:100%;padding:12px 16px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;transition:border-color 0.3s;background-color:white;cursor:pointer;">
+                    <option value="">请选择知识库类型</option>
+                    <option value="DOCUMENT_SEARCH" selected>文档搜索 (DOCUMENT_SEARCH)</option>
+                    <option value="DATA_QUERY">数据查询 (DATA_QUERY)</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="tableNameGroup" style="display:none;">
+                <label for="tableName">数据表名称 * <small style="color:#999;font-weight:normal;">(仅支持小写字母、数字、下划线)</small></label>
+                <input type="text" id="tableName" name="tableName" placeholder="请输入数据表名称" pattern="^[a-z0-9_]+$">
+                <div id="tableNameError" style="color:#dc3545;font-size:12px;margin-top:4px;display:none;">只能包含小写字母、数字和下划线</div>
+            </div>
+
+            <div class="form-group">
+                <label for="accessibleBy">可见范围 *</label>
+                <select id="accessibleBy" name="accessibleBy" required style="width:100%;padding:12px 16px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;transition:border-color 0.3s;background-color:white;cursor:pointer;">
+                    <option value="">请选择可见范围</option>
+                    <option value="VISITOR" selected>未购车用户 (VISITOR)</option>
+                    <option value="OWNER">已购车用户 (OWNER)</option>
+                    <option value="CUSTOMER_SERVICE">客服 (CUSTOMER_SERVICE)</option>
+                </select>
+                <div class="param-hint">权限由高到低：CUSTOMER_SERVICE > OWNER > VISITOR。设置CUSTOMER_SERVICE则仅客服可见；设置OWNER则客服和已购车用户可见；设置VISITOR则所有人可见。</div>
+            </div>
+
+            <button type="submit" class="upload-btn" id="uploadBtn">开始上传</button>
+        </form>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">0%</div>
+        </div>
+
+        <div class="result" id="result">
+            <div class="result-title" id="resultTitle"></div>
+            <div class="result-content" id="resultContent"></div>
+        </div>
+
+        <!-- 切片表单 -->
+        <div class="split-form" id="splitForm">
+            <h2>📄 文档切片设置</h2>
+            <form id="splitConfigForm">
+                <input type="hidden" id="documentId" name="documentId">
+                
+                <div class="form-group">
+                    <label for="splitType">切片方式 *</label>
+                    <select id="splitType" name="splitType" required>
+                        <option value="">请选择切片方式</option>
+                        <option value="LENGTH">按长度切分 (LENGTH)</option>
+                        <option value="TITLE">按标题切分 (TITLE)</option>
+                        <option value="REGEX">按正则切分 (REGEX)</option>
+                        <option value="SMART">智能切分 (SMART)</option>
+                        <option value="SEPARATOR">按分隔符切分 (SEPARATOR)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="chunkSize">最大分段长度 *</label>
+                    <input type="number" id="chunkSize" name="chunkSize" placeholder="例如：500" min="1" required>
+                    <div class="param-hint">所有切分方式都需要此参数</div>
+                </div>
+
+                <!-- 按长度切分、按标题切分需要 -->
+                <div class="param-group" id="overlapGroup">
+                    <div class="form-group">
+                        <label for="overlap">分段重叠长度</label>
+                        <input type="number" id="overlap" name="overlap" placeholder="例如：50" min="0">
+                        <div class="param-hint">按长度切分、按标题切分需要</div>
+                    </div>
+                </div>
+
+                <!-- 按标题切分需要 -->
+                <div class="param-group" id="titleLevelGroup">
+                    <div class="form-group">
+                        <label for="titleLevel">标题级数</label>
+                        <input type="number" id="titleLevel" name="titleLevel" placeholder="例如：3" min="1" max="6">
+                        <div class="param-hint">按标题切分需要，范围1-6</div>
+                    </div>
+                </div>
+
+                <!-- 按正则切分需要 -->
+                <div class="param-group" id="regexGroup">
+                    <div class="form-group">
+                        <label for="regex">正则表达式</label>
+                        <input type="text" id="regex" name="regex" placeholder="例如：\n\n+">
+                        <div class="param-hint">按正则切分需要</div>
+                    </div>
+                </div>
+
+                <!-- 按分隔符切分需要 -->
+                <div class="param-group" id="separatorGroup">
+                    <div class="form-group">
+                        <label for="separator">分隔符</label>
+                        <input type="text" id="separator" name="separator" placeholder="例如：\n\n">
+                        <div class="param-hint">按分隔符切分需要</div>
+                    </div>
+                </div>
+
+                <button type="submit" class="split-btn" id="splitBtn">开始切片</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 员工登录态校验：未登录或非员工账号则跳转到员工登录页
+        (async function checkStaffLogin() {
+            try {
+                const resp = await fetch('/auth/isLogin');
+                const data = await resp.json();
+                if (data.code !== 200 || data.data !== true) {
+                    window.location.href = '/staff-login.html';
+                    return;
+                }
+                const userResp = await fetch('/auth/userInfo');
+                const userData = await userResp.json();
+                if (userData.code !== 200 || !userData.data || userData.data.userType !== 'staff') {
+                    await fetch('/auth/logout', { method: 'POST' });
+                    window.location.href = '/staff-login.html';
+                }
+            } catch (e) {
+                window.location.href = '/staff-login.html';
+            }
+        })();
+
+        const fileInput = document.getElementById('file');
+        const fileName = document.getElementById('fileName');
+        const fileWrapper = document.getElementById('fileWrapper');
+        const uploadForm = document.getElementById('uploadForm');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const result = document.getElementById('result');
+        const resultTitle = document.getElementById('resultTitle');
+        const resultContent = document.getElementById('resultContent');
+        const knowledgeBaseTypeSelect = document.getElementById('knowledgeBaseType');
+        const tableNameGroup = document.getElementById('tableNameGroup');
+        const tableNameInput = document.getElementById('tableName');
+        const tableNameError = document.getElementById('tableNameError');
+
+        // tableName 输入验证（只允许小写字母、数字、下划线）
+        tableNameInput.addEventListener('input', function() {
+            const value = this.value;
+            const validPattern = /^[a-z0-9_]*$/;
+            if (value && !validPattern.test(value)) {
+                tableNameError.style.display = 'block';
+                this.style.borderColor = '#dc3545';
+            } else {
+                tableNameError.style.display = 'none';
+                this.style.borderColor = '#e0e0e0';
+            }
+        });
+
+        // 知识库类型选择变化时，显示/隐藏数据表名称输入框
+        knowledgeBaseTypeSelect.addEventListener('change', function() {
+            if (this.value === 'DATA_QUERY') {
+                tableNameGroup.style.display = 'block';
+                tableNameInput.required = true;
+            } else {
+                tableNameGroup.style.display = 'none';
+                tableNameInput.required = false;
+                tableNameInput.value = '';
+                tableNameError.style.display = 'none';
+            }
+        });
+
+        // 文件选择显示，并自动提取文件名填充标题和描述
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                const fullName = file.name;
+                fileName.textContent = fullName;
+                // 去掉扩展名作为标题和描述
+                const lastDotIdx = fullName.lastIndexOf('.');
+                const baseName = lastDotIdx > 0 ? fullName.substring(0, lastDotIdx) : fullName;
+                // 仅在用户尚未手动输入时自动填充
+                const titleInput = document.getElementById('title');
+                const descInput = document.getElementById('description');
+                if (!titleInput.value.trim()) {
+                    titleInput.value = baseName;
+                }
+                if (!descInput.value.trim()) {
+                    descInput.value = baseName;
+                }
+            }
+        });
+
+        // 拖拽上传
+        fileWrapper.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileWrapper.style.borderColor = '#667eea';
+            fileWrapper.style.background = '#f8f9ff';
+        });
+
+        fileWrapper.addEventListener('dragleave', () => {
+            fileWrapper.style.borderColor = '#ccc';
+            fileWrapper.style.background = 'transparent';
+        });
+
+        fileWrapper.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileWrapper.style.borderColor = '#ccc';
+            fileWrapper.style.background = 'transparent';
+            
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                fileInput.files = e.dataTransfer.files;
+                const fullName = e.dataTransfer.files[0].name;
+                fileName.textContent = fullName;
+                // 去掉扩展名作为标题和描述
+                const lastDotIdx = fullName.lastIndexOf('.');
+                const baseName = lastDotIdx > 0 ? fullName.substring(0, lastDotIdx) : fullName;
+                const titleInput = document.getElementById('title');
+                const descInput = document.getElementById('description');
+                if (!titleInput.value.trim()) {
+                    titleInput.value = baseName;
+                }
+                if (!descInput.value.trim()) {
+                    descInput.value = baseName;
+                }
+            }
+        });
+
+        // 表单提交
+        uploadForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const file = fileInput.files[0];
+            if (!file) {
+                showResult('error', '请选择要上传的文件');
+                return;
+            }
+
+            // 如果选择的是数据查询类型，验证tableName
+            const knowledgeBaseTypeValue = document.getElementById('knowledgeBaseType').value;
+            if (knowledgeBaseTypeValue === 'DATA_QUERY') {
+                const tableNameValue = tableNameInput.value.trim();
+                if (!tableNameValue) {
+                    showResult('error', '请输入数据表名称', '数据查询类型必须填写数据表名称');
+                    tableNameInput.focus();
+                    return;
+                }
+                // 验证tableName格式
+                const tableNamePattern = /^[a-z0-9_]+$/;
+                if (!tableNamePattern.test(tableNameValue)) {
+                    showResult('error', '数据表名称格式错误', '只能包含小写字母、数字和下划线');
+                    tableNameInput.focus();
+                    return;
+                }
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('title', document.getElementById('title').value);
+            formData.append('description', document.getElementById('description').value);
+            formData.append('knowledgeBaseType', document.getElementById('knowledgeBaseType').value);
+            formData.append('accessibleBy', document.getElementById('accessibleBy').value);
+            // 如果有tableName则添加
+            if (knowledgeBaseTypeValue === 'DATA_QUERY') {
+                formData.append('tableName', tableNameInput.value.trim());
+            }
+
+            // 重置状态
+            result.className = 'result';
+            progressContainer.style.display = 'block';
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = '上传中...';
+
+            try {
+                const xhr = new XMLHttpRequest();
+                
+                // 进度监听
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        progressFill.style.width = percent + '%';
+                        progressText.textContent = percent + '%';
+                    }
+                });
+
+                // 完成监听
+                xhr.addEventListener('load', () => {
+                    progressContainer.style.display = 'none';
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = '开始上传';
+
+                    if (xhr.status === 200) {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.knowledgeBaseType === 'DATA_QUERY') {
+                            showResult('success', '上传成功！', `
+                                <strong>文档ID：</strong>${response.docId}<br>
+                                <strong>文档标题：</strong>${response.docTitle}<br>
+                                <strong>版本ID：</strong>${response.currentVersionId ?? '-'}<br>
+                                <strong>状态：</strong>${response.status}<br>
+                                <strong>提示：</strong>DATA_QUERY 类型文档无需切片，数据已导入数据库。
+                            `);
+                            // 重置表单
+                            uploadForm.reset();
+                            fileName.textContent = '';
+                            // 延迟跳转到文档管理页
+                            setTimeout(() => { window.location.href = '/document.html'; }, 1500);
+                        } else {
+                            showResult('success', '上传成功！', `
+                                <strong>文档ID：</strong>${response.docId}<br>
+                                <strong>文档标题：</strong>${response.docTitle}<br>
+                                <strong>版本ID：</strong>${response.currentVersionId ?? '-'}<br>
+                                <strong>状态：</strong>${response.status}
+                            `);
+                            // 保存文档ID并显示切片表单
+                            document.getElementById('documentId').value = response.docId;
+                            document.getElementById('splitForm').style.display = 'block';
+                            // 重置表单
+                            uploadForm.reset();
+                            fileName.textContent = '';
+                        }
+                    } else {
+                        let errorMsg = '服务器返回错误：' + xhr.status;
+                        try {
+                            const respText = xhr.responseText.trim();
+                            if (respText) errorMsg = respText;
+                        } catch (e) {}
+                        showResult('error', '上传失败', errorMsg);
+                    }
+                });
+
+                xhr.addEventListener('error', () => {
+                    progressContainer.style.display = 'none';
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = '开始上传';
+                    showResult('error', '上传失败', '网络请求出错，请检查网络连接');
+                });
+
+                xhr.open('POST', '/api/document/upload');
+                xhr.send(formData);
+
+            } catch (error) {
+                progressContainer.style.display = 'none';
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = '开始上传';
+                showResult('error', '上传失败', error.message);
+            }
+        });
+
+        function showResult(type, title, content = '') {
+            result.className = 'result ' + type;
+            resultTitle.textContent = title;
+            resultContent.innerHTML = content;
+        }
+
+        // 切片方式选择，动态显示/隐藏参数组
+        const splitTypeSelect = document.getElementById('splitType');
+        const splitConfigForm = document.getElementById('splitConfigForm');
+        const splitBtn = document.getElementById('splitBtn');
+        
+        function updateParamVisibility() {
+            const splitType = splitTypeSelect.value;
+            
+            // 隐藏所有参数组
+            document.getElementById('overlapGroup').classList.remove('show');
+            document.getElementById('titleLevelGroup').classList.remove('show');
+            document.getElementById('regexGroup').classList.remove('show');
+            document.getElementById('separatorGroup').classList.remove('show');
+            
+            // 根据切片类型显示对应参数组
+            if (splitType === 'LENGTH' || splitType === 'TITLE') {
+                document.getElementById('overlapGroup').classList.add('show');
+            }
+            if (splitType === 'TITLE') {
+                document.getElementById('titleLevelGroup').classList.add('show');
+            }
+            if (splitType === 'REGEX') {
+                document.getElementById('regexGroup').classList.add('show');
+            }
+            if (splitType === 'SEPARATOR') {
+                document.getElementById('separatorGroup').classList.add('show');
+            }
+        }
+        
+        splitTypeSelect.addEventListener('change', updateParamVisibility);
+        
+        // 切片表单提交
+        splitConfigForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const documentId = document.getElementById('documentId').value;
+            const splitType = document.getElementById('splitType').value;
+            const chunkSize = document.getElementById('chunkSize').value;
+            const overlap = document.getElementById('overlap').value || 0;
+            const titleLevel = document.getElementById('titleLevel').value || '';
+            const regex = document.getElementById('regex').value || '';
+            const separator = document.getElementById('separator').value || '';
+            
+            if (!splitType) {
+                showResult('error', '请选择切片方式');
+                return;
+            }
+            if (!chunkSize || chunkSize < 1) {
+                showResult('error', '请输入有效的最大分段长度');
+                return;
+            }
+            
+            // 构建请求参数
+            const params = new URLSearchParams();
+            params.append('splitType', splitType);
+            params.append('chunkSize', chunkSize);
+            params.append('overlap', overlap);
+            params.append('titleLevel', titleLevel);
+            params.append('regex', regex);
+            params.append('separator', separator);
+            
+            splitBtn.disabled = true;
+            splitBtn.textContent = '切片中...';
+            
+            try {
+                const response = await fetch(`/api/document/split/${documentId}?${params.toString()}`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showResult('success', '切片完成！', `
+                        <strong>文档ID：</strong>${documentId}<br>
+                        <strong>切片方式：</strong>${splitType}<br>
+                        <strong>切片数量：</strong>${result} 个片段
+                    `);
+                    // 隐藏切片表单
+                    document.getElementById('splitForm').style.display = 'none';
+                    // 延迟跳转到文档管理页
+                    setTimeout(() => { window.location.href = '/document.html'; }, 1500);
+                } else {
+                    const errorText = await response.text();
+                    showResult('error', '切片失败', errorText || '服务器返回错误：' + response.status);
+                }
+            } catch (error) {
+                showResult('error', '切片失败', error.message);
+            } finally {
+                splitBtn.disabled = false;
+                splitBtn.textContent = '开始切片';
+            }
+        });
+    </script>
+</body>
+</html>

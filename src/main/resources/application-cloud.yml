@@ -1,0 +1,18 @@
+# ================================================================
+# 云端模型配置（DashScope 百炼 · OpenAI 兼容端点）
+#
+# 启用方式：--spring.profiles.active=cloud
+#   IDE    : VM options 加 -Dspring.profiles.active=cloud
+#   命令行 : java -jar know-engine.jar --spring.profiles.active=cloud
+#
+# 默认（不激活 profile）走本地 Ollama：http://localhost:11434/v1
+# embedding（elasticsearch.base-url + text-embedding-v4）不受影响，始终走云端
+# ================================================================
+langchain4j:
+  open-ai:
+    chat-model:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      model-name: qwen3.6-35b-a3b
+    streaming-chat-model:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      model-name: qwen3.6-35b-a3b

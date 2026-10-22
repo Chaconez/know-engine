@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文档管理</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        /* 导航栏 */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .navbar h1 { font-size: 22px; color: #333; }
+        .nav-links { display: flex; gap: 12px; }
+        .nav-links a {
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .nav-links a.upload { background: #f0f4ff; color: #667eea; }
+        .nav-links a.upload:hover { background: #667eea; color: white; }
+        .nav-links a.chat { background: #f0fff4; color: #28a745; }
+        .nav-links a.chat:hover { background: #28a745; color: white; }
+        .nav-links a.qa-cache { background: #fff3e0; color: #e65100; }
+        .nav-links a.qa-cache:hover { background: #e65100; color: white; }
+        /* 搜索区 */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
+            align-items: flex-end;
+        }
+        .filter-item { display: flex; flex-direction: column; gap: 4px; }
+        .filter-item label { font-size: 12px; color: #888; font-weight: 500; }
+        .filter-item input, .filter-item select {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            min-width: 140px;
+        }
+        .filter-item input:focus, .filter-item select:focus { outline: none; border-color: #667eea; }
+        /* 按钮 */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            white-space: nowrap;
+        }
+        .btn:hover:not(:disabled) { transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-success { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+        /* 工具栏 */
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .toolbar-left { display: flex; gap: 10px; }
+        .toolbar-right { font-size: 13px; color: #888; }
+        /* 表格 */
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 12px; text-align: left; font-size: 14px; }
+        thead th {
+            background: #f8f9fa;
+            color: #555;
+            font-weight: 600;
+            border-bottom: 2px solid #e0e0e0;
+            white-space: nowrap;
+        }
+        tbody tr { border-bottom: 1px solid #f0f0f0; transition: background-color 0.2s; }
+        tbody tr:hover { background: #f8f9ff; }
+        tbody td { color: #333; }
+        .doc-title { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .doc-desc { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #888; }
+        /* 状态标签 */
+        .tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+        .tag-init { background: #e9ecef; color: #6c757d; }
+        .tag-uploaded { background: #cce5ff; color: #004085; }
+        .tag-converting { background: #fff3cd; color: #856404; }
+        .tag-converted { background: #d1ecf1; color: #0c5460; }
+        .tag-chunked { background: #d4edda; color: #155724; }
+        .tag-vector_stored { background: #d4edda; color: #155724; }
+        .tag-stored { background: #d4edda; color: #155724; }
+        .tag-doc-search { background: #f0f4ff; color: #667eea; }
+        .tag-data-query { background: #fff0f0; color: #dc3545; }
+        /* 分段类型标签 */
+        .tag-parent { background: #e3f2fd; color: #1565c0; }
+        .tag-child { background: #fff3e0; color: #e65100; }
+        .tag-brother { background: #e0f2f1; color: #00695c; }
+        /* 操作按钮 */
+        .action-btns { display: flex; gap: 6px; flex-wrap: wrap; max-width: 160px; }
+        .action-btns .btn { margin-bottom: 2px; }
+        /* 分页 */
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 20px; }
+        .pagination button {
+            padding: 6px 14px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .pagination button:hover:not(:disabled) { border-color: #667eea; color: #667eea; }
+        .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .pagination .page-info { font-size: 14px; color: #666; margin: 0 8px; }
+        /* 弹窗 */
+        .modal-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 40px;
+        }
+        .modal.modal-lg { max-width: 900px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .modal-header h2 { font-size: 20px; color: #333; }
+        .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; }
+        .modal-close:hover { color: #333; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; color: #555; font-weight: 500; font-size: 14px; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%; padding: 10px 14px; border: 2px solid #e0e0e0;
+            border-radius: 8px; font-size: 14px; transition: border-color 0.3s;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: #667eea; }
+        .form-group input:disabled, .form-group select:disabled, .form-group textarea:disabled {
+            background: #f5f5f5; color: #888; cursor: not-allowed; border-color: #e8e8e8;
+        }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-row { display: flex; gap: 16px; }
+        .form-row .form-group { flex: 1; }
+        .param-group { display: none; }
+        .param-group.show { display: block; }
+        .param-hint { font-size: 12px; color: #888; margin-top: 4px; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+        /* 提示消息 */
+        .toast {
+            position: fixed; top: 20px; right: 20px;
+            padding: 12px 24px; border-radius: 8px; color: white;
+            font-size: 14px; z-index: 2000;
+            opacity: 0; transform: translateY(-20px);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.success { background: #28a745; }
+        .toast.error { background: #dc3545; }
+        .toast.warning { background: #ffc107; color: #333; }
+        /* 空状态 */
+        .empty-state { text-align: center; padding: 40px; color: #999; font-size: 14px; }
+        /* 分段列表 */
+        .segment-list { margin-top: 16px; }
+        .segment-item {
+            border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 16px;
+            margin-bottom: 10px; background: #fafafa; transition: border-color 0.2s;
+        }
+        .segment-item:hover { border-color: #667eea; }
+        .segment-item.segment-parent { border-left: 4px solid #1565c0; background: #f5f9ff; }
+        .segment-item.segment-child { border-left: 4px solid #e65100; background: #fffaf5; }
+        .segment-item.segment-brother { border-left: 4px solid #00695c; }
+        .segment-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .segment-item-meta { font-size: 12px; color: #888; display: flex; gap: 12px; }
+        .segment-item-text { font-size: 14px; color: #333; line-height: 1.6; white-space: pre-wrap; word-break: break-all; max-height: 120px; overflow: hidden; }
+        .segment-item-text.expanded { max-height: none; }
+        .segment-actions { display: flex; gap: 6px; }
+        .segment-toggle { font-size: 12px; color: #667eea; cursor: pointer; margin-top: 4px; }
+        /* 复选框 */
+        .checkbox-cell { width: 40px; text-align: center; }
+        input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+        /* JSON 展示区 */
+        .json-viewer {
+            background: #1e1e2e; color: #cdd6f4; border-radius: 8px;
+            padding: 16px; font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 13px; line-height: 1.6; overflow-x: auto; white-space: pre-wrap;
+            word-break: break-all; max-height: 400px; overflow-y: auto;
+        }
+        .json-empty { color: #999; text-align: center; padding: 20px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 导航栏 -->
+        <div class="navbar">
+            <h1>📄 文档管理</h1>
+            <div class="nav-links">
+                <a href="/upload.html" class="upload">上传文档</a>
+                <a href="/chat.html" class="chat">AI 对话</a>
+                <a href="/qa-cache.html" class="qa-cache">📋 问答缓存审核</a>
+            </div>
+        </div>
+
+        <!-- 搜索筛选 -->
+        <div class="filter-bar">
+            <div class="filter-item">
+                <label>文档标题</label>
+                <input type="text" id="filterTitle" placeholder="模糊搜索">
+            </div>
+            <div class="filter-item">
+                <label>状态</label>
+                <select id="filterStatus">
+                    <option value="">全部</option>
+                    <option value="INIT">初始状态</option>
+                    <option value="UPLOADED">上传完成</option>
+                    <option value="CONVERTING">转换中</option>
+                    <option value="CONVERTED">转换完成</option>
+                    <option value="CHUNKED">分块完成</option>
+                    <option value="VECTOR_STORED">向量存储完成</option>
+                    <option value="STORED">存储完成</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>知识库类型</label>
+                <select id="filterType">
+                    <option value="">全部</option>
+                    <option value="DOCUMENT_SEARCH">文档搜索</option>
+                    <option value="DATA_QUERY">数据查询</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="searchDocuments()">搜索</button>
+            <button class="btn btn-warning" onclick="resetFilter()">重置</button>
+        </div>
+
+        <!-- 工具栏 -->
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <a href="/upload.html" class="btn btn-success" style="text-decoration:none;">+ 上传文档</a>
+                <button class="btn btn-danger" onclick="batchDelete()">批量删除</button>
+            </div>
+            <div class="toolbar-right" id="totalCount"></div>
+        </div>
+
+        <!-- 文档表格 -->
+        <table>
+            <thead>
+                <tr>
+                    <th class="checkbox-cell"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+                    <th>ID</th>
+                    <th>文档标题</th>
+                    <th>状态</th>
+                    <th>知识库类型</th>
+                    <th>描述</th>
+                    <th>版本</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="docTableBody">
+                <tr><td colspan="9"><div class="empty-state">加载中...</div></td></tr>
+            </tbody>
+        </table>
+
+        <!-- 分页 -->
+        <div class="pagination" id="pagination">
+            <button onclick="changePage(currentPage-1)" id="prevBtn">上一页</button>
+            <span class="page-info" id="pageInfo">1 / 1</span>
+            <button onclick="changePage(currentPage+1)" id="nextBtn">下一页</button>
+        </div>
+    </div>
+
+    <!-- 文档编辑弹窗 -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="editModalTitle">新增文档</h2>
+                <button class="modal-close" onclick="closeModal('editModal')">&times;</button>
+            </div>
+            <form id="editForm">
+                <input type="hidden" id="editDocId">
+                <input type="hidden" id="editLockVersion" value="0">
+                <div class="form-group">
+                    <label>文档标题 *</label>
+                    <input type="text" id="editTitle" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>知识库类型 *</label>
+                        <select id="editType" required>
+                            <option value="">请选择</option>
+                            <option value="DOCUMENT_SEARCH">文档搜索</option>
+                            <option value="DATA_QUERY">数据查询</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>状态</label>
+                        <select id="editStatus">
+                            <option value="INIT">初始状态</option>
+                            <option value="UPLOADED">上传完成</option>
+                            <option value="CONVERTING">转换中</option>
+                            <option value="CONVERTED">转换完成</option>
+                            <option value="CHUNKED">分块完成</option>
+                            <option value="VECTOR_STORED">向量存储完成</option>
+                            <option value="STORED">存储完成</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>可见范围</label>
+                    <select id="editAccessible">
+                        <option value="">无</option>
+                        <option value="VISITOR">未购车用户</option>
+                        <option value="OWNER">已购车用户</option>
+                        <option value="CUSTOMER_SERVICE">客服</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>文档描述</label>
+                    <textarea id="editDesc" placeholder="请输入文档描述"></textarea>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button class="btn btn-warning" onclick="closeModal('editModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveDocument()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分段查看弹窗 -->
+    <div class="modal-overlay" id="segmentModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h2>分段列表 <span id="segmentDocTitle" style="font-size:14px;color:#888;"></span></h2>
+                <button class="modal-close" onclick="closeModal('segmentModal')">&times;</button>
+            </div>
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <span id="segmentCount" style="font-size:14px;color:#666;"></span>
+                </div>
+                <div class="toolbar-right">
+                    <button class="btn btn-sm btn-primary" onclick="changeSegmentPage(segmentCurrentPage-1)" id="segPrevBtn">上一页</button>
+                    <span class="page-info" id="segPageInfo">1 / 1</span>
+                    <button class="btn btn-sm btn-primary" onclick="changeSegmentPage(segmentCurrentPage+1)" id="segNextBtn">下一页</button>
+                </div>
+            </div>
+            <div class="segment-list" id="segmentList">
+                <div class="empty-state">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 数据预览弹窗 -->
+    <div class="modal-overlay" id="dataModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h2>数据预览 <span id="dataDocTitle" style="font-size:14px;color:#888;"></span></h2>
+                <button class="modal-close" onclick="closeModal('dataModal')">&times;</button>
+            </div>
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <span id="dataCount" style="font-size:14px;color:#666;"></span>
+                </div>
+                <div class="toolbar-right">
+                    <button class="btn btn-sm btn-primary" onclick="changeDataPage(dataCurrentPage-1)" id="dataPrevBtn">上一页</button>
+                    <span class="page-info" id="dataPageInfo">1 / 1</span>
+                    <button class="btn btn-sm btn-primary" onclick="changeDataPage(dataCurrentPage+1)" id="dataNextBtn">下一页</button>
+                </div>
+            </div>
+            <div style="overflow-x:auto;max-height:500px;overflow-y:auto;">
+                <table id="dataTable" style="width:100%;border-collapse:collapse;">
+                    <thead id="dataTableHead"></thead>
+                    <tbody id="dataTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分段编辑弹窗 -->
+    <div class="modal-overlay" id="segmentEditModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>编辑分段</h2>
+                <button class="modal-close" onclick="closeModal('segmentEditModal')">&times;</button>
+            </div>
+            <form id="segmentEditForm">
+                <input type="hidden" id="segEditId">
+                <input type="hidden" id="segEditLockVersion" value="0">
+                <input type="hidden" id="segEditDocId">
+                <input type="hidden" id="segEditChunkId">
+                <input type="hidden" id="segEditChunkOrder">
+                <div class="form-group">
+                    <label>分段内容</label>
+                    <textarea id="segEditText" style="min-height:200px;"></textarea>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button class="btn btn-warning" onclick="closeModal('segmentEditModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveSegment()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 文档扩展信息弹窗 -->
+    <div class="modal-overlay" id="extensionModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>扩展信息 <span id="extDocTitle" style="font-size:14px;color:#888;"></span></h2>
+                <button class="modal-close" onclick="closeModal('extensionModal')">&times;</button>
+            </div>
+            <div id="extensionContent">
+                <div class="json-empty">加载中...</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-warning" onclick="closeModal('extensionModal')">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分段 Meta 信息弹窗 -->
+    <div class="modal-overlay" id="segmentMetaModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Meta 信息 <span id="metaSegId" style="font-size:14px;color:#888;"></span></h2>
+                <button class="modal-close" onclick="closeModal('segmentMetaModal')">&times;</button>
+            </div>
+            <div id="segmentMetaContent">
+                <div class="json-empty">加载中...</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-warning" onclick="closeModal('segmentMetaModal')">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 上传新版本弹窗 -->
+    <div class="modal-overlay" id="versionModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>上传新版本 <span id="versionDocTitle" style="font-size:14px;color:#888;"></span></h2>
+                <button class="modal-close" onclick="closeModal('versionModal')">&times;</button>
+            </div>
+            <form id="versionForm">
+                <input type="hidden" id="versionDocId">
+                <div class="form-group">
+                    <label>新版本号 *</label>
+                    <input type="text" id="versionNumber" required placeholder="请输入版本号，如 2.0.0" pattern="^\d+\.\d+\.\d+$">
+                </div>
+                <div class="form-group">
+                    <label>版本变更说明</label>
+                    <input type="text" id="versionChangelog" placeholder="可选，描述此版本的变更内容">
+                </div>
+                <div class="form-group">
+                    <label>选择文件 *</label>
+                    <input type="file" id="versionFile" required>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button class="btn btn-warning" onclick="closeModal('versionModal')">取消</button>
+                <button class="btn btn-success" onclick="submitVersion()">上传新版本</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 版本列表弹窗 -->
+    <div class="modal-overlay" id="versionListModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h2>版本列表 <span id="versionListTitle" style="font-size:14px;color:#888;"></span></h2>
+                <button class="modal-close" onclick="closeModal('versionListModal')">&times;</button>
+            </div>
+            <div id="versionListContent">
+                <div class="empty-state">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 版本上传后切片弹窗 -->
+    <div class="modal-overlay" id="versionSplitModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>📄 文档切片设置 <span id="versionSplitTitle" style="font-size:14px;color:#888;"></span></h2>
+                <button class="modal-close" onclick="closeModal('versionSplitModal')">&times;</button>
+            </div>
+            <form id="versionSplitForm">
+                <input type="hidden" id="versionSplitDocId">
+                <div class="form-group">
+                    <label>切片方式 *</label>
+                    <select id="versionSplitType" required>
+                        <option value="">请选择切片方式</option>
+                        <option value="LENGTH">按长度切分 (LENGTH)</option>
+                        <option value="TITLE">按标题切分 (TITLE)</option>
+                        <option value="REGEX">按正则切分 (REGEX)</option>
+                        <option value="SMART">智能切分 (SMART)</option>
+                        <option value="SEPARATOR">按分隔符切分 (SEPARATOR)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>最大分段长度 *</label>
+                    <input type="number" id="versionSplitChunkSize" placeholder="例如：500" min="1" required>
+                    <div class="param-hint">所有切分方式都需要此参数</div>
+                </div>
+                <div class="param-group" id="versionSplitOverlapGroup">
+                    <div class="form-group">
+                        <label>分段重叠长度</label>
+                        <input type="number" id="versionSplitOverlap" placeholder="例如：50" min="0">
+                        <div class="param-hint">按长度切分、按标题切分需要</div>
+                    </div>
+                </div>
+                <div class="param-group" id="versionSplitTitleLevelGroup">
+                    <div class="form-group">
+                        <label>标题级数</label>
+                        <input type="number" id="versionSplitTitleLevel" placeholder="例如：3" min="1" max="6">
+                        <div class="param-hint">按标题切分需要，范围1-6</div>
+                    </div>
+                </div>
+                <div class="param-group" id="versionSplitRegexGroup">
+                    <div class="form-group">
+                        <label>正则表达式</label>
+                        <input type="text" id="versionSplitRegex" placeholder="例如：\n\n+">
+                        <div class="param-hint">按正则切分需要</div>
+                    </div>
+                </div>
+                <div class="param-group" id="versionSplitSeparatorGroup">
+                    <div class="form-group">
+                        <label>分隔符</label>
+                        <input type="text" id="versionSplitSeparator" placeholder="例如：\n\n">
+                        <div class="param-hint">按分隔符切分需要</div>
+                    </div>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button class="btn btn-warning" onclick="closeModal('versionSplitModal')">跳过</button>
+                <button class="btn btn-primary" id="versionSplitBtn" onclick="submitVersionSplit()">开始切片</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ===== 状态管理 =====
+        let currentPage = 1;
+        let pageSize = 10;
+        let totalPages = 1;
+        let totalRecords = 0;
+        let selectedIds = new Set();
+        let docRecords = []; // 存储当前页文档数据，供 onclick 查找标题
+        // 分段相关
+        let segmentDocId = null;
+        let segmentVersionId = null; // 当前查看的版本ID（null 表示查全部版本）
+        let segmentCurrentPage = 1;
+        let segmentPageSize = 10;
+        let segmentTotalPages = 1;
+        // 数据预览相关
+        let dataDocId = null;
+        let dataCurrentPage = 1;
+        let dataPageSize = 50;
+        let dataTotalPages = 1;
+
+        // ===== 工具函数 =====
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast ' + type + ' show';
+            setTimeout(() => t.className = 'toast', 2500);
+        }
+
+        function formatTime(timeStr) {
+            if (!timeStr) return '-';
+            const d = new Date(timeStr);
+            if (isNaN(d)) return timeStr;
+            const pad = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
+        function escapeHtml(text) {
+            if (text == null) return '';
+            const div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
+        }
+
+        // 状态枚举中文映射（参考 DocumentStatus / SegmentStatus）
+        const STATUS_MAP = {
+            'INIT': '初始状态',
+            'UPLOADED': '上传完成',
+            'CONVERTING': '转换中',
+            'CONVERTED': '转换完成',
+            'CHUNKED': '分块完成',
+            'VECTOR_STORED': '向量存储完成',
+            'STORED': '存储完成'
+        };
+
+        function statusTag(status) {
+            if (!status) return '<span class="tag tag-init">-</span>';
+            const cls = status.toLowerCase().replace(/_/g, '_');
+            const label = STATUS_MAP[status] || status;
+            return `<span class="tag tag-${cls}">${label}</span>`;
+        }
+
+        function typeTag(type) {
+            if (!type) return '-';
+            if (type === 'DOCUMENT_SEARCH') return '<span class="tag tag-doc-search">文档搜索</span>';
+            if (type === 'DATA_QUERY') return '<span class="tag tag-data-query">数据查询</span>';
+            return type;
+        }
+
+        // ===== 文档列表 =====
+        async function loadDocuments() {
+            const params = new URLSearchParams();
+            params.append('current', currentPage);
+            params.append('size', pageSize);
+            const title = document.getElementById('filterTitle').value.trim();
+            const status = document.getElementById('filterStatus').value;
+            const type = document.getElementById('filterType').value;
+            if (title) params.append('docTitle', title);
+            if (status) params.append('status', status);
+            if (type) params.append('knowledgeBaseType', type);
+
+            try {
+                const res = await fetch(`/api/document/page?${params}`);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const page = await res.json();
+                totalPages = page.pages || 1;
+                totalRecords = page.total || 0;
+                renderTable(page.records || []);
+                renderPagination();
+                document.getElementById('totalCount').textContent = `共 ${totalRecords} 条记录`;
+                selectedIds.clear();
+                document.getElementById('selectAll').checked = false;
+            } catch (e) {
+                showToast('加载文档列表失败: ' + e.message, 'error');
+                document.getElementById('docTableBody').innerHTML = '<tr><td colspan="9"><div class="empty-state">加载失败</div></td></tr>';
+            }
+        }
+
+        function renderTable(records) {
+            docRecords = records || [];
+            if (!records || records.length === 0) {
+                document.getElementById('docTableBody').innerHTML = '<tr><td colspan="9"><div class="empty-state">暂无数据</div></td></tr>';
+                return;
+            }
+            const html = records.map(doc => `
+                <tr>
+                    <td class="checkbox-cell"><input type="checkbox" value="${doc.docId}" onchange="toggleSelect(${doc.docId})" ${selectedIds.has(doc.docId) ? 'checked' : ''}></td>
+                    <td>${doc.docId}</td>
+                    <td class="doc-title" title="${escapeHtml(doc.docTitle)}">${escapeHtml(doc.docTitle)}</td>
+                    <td>${statusTag(doc.status)}</td>
+                    <td>${typeTag(doc.knowledgeBaseType)}</td>
+                    <td class="doc-desc" title="${escapeHtml(doc.description)}">${escapeHtml(doc.description || '-')}</td>
+                    <td id="versionCell-${doc.docId}" style="min-width:90px;">
+                        <span style="color:#999;font-size:13px;">加载中...</span>
+                    </td>
+                    <td style="white-space:nowrap;">${formatTime(doc.createdAt)}</td>
+                    <td>
+                        <div class="action-btns">
+                            ${doc.knowledgeBaseType === 'DATA_QUERY'
+                                ? `<button class="btn btn-sm btn-primary" onclick="viewData(${doc.docId})">查看数据</button>`
+                                : `<button class="btn btn-sm btn-primary" onclick="viewSegments(${doc.docId})">查看分段</button>`}
+                            <button class="btn btn-sm btn-success" onclick="openVersionModal(${doc.docId})">上传新版本</button>
+                            <button class="btn btn-sm btn-warning" onclick="openEditModal(${doc.docId})">编辑</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteDocument(${doc.docId})">删除</button>
+<!--                            <button class="btn btn-sm btn-success" onclick="viewExtension(${doc.docId})">扩展</button>-->
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('docTableBody').innerHTML = html;
+            // 异步加载版本信息
+            loadVersionInfoForTable(records);
+        }
+
+        // 批量加载当前页文档的当前激活版本号（取 currentVersionId 对应的版本，而非最大版本）
+        async function loadVersionInfoForTable(records) {
+            await Promise.all(records.map(async (doc) => {
+                try {
+                    const res = await fetch(`/api/document/versions/${doc.docId}`);
+                    if (res.ok) {
+                        const versions = await res.json();
+                        const cell = document.getElementById(`versionCell-${doc.docId}`);
+                        if (!cell) return;
+                        if (versions.length > 0) {
+                            // 优先展示 currentVersionId 对应的版本号，找不到则降级展示第一条
+                            const currentVer = doc.currentVersionId
+                                ? versions.find(v => v.versionId === doc.currentVersionId)
+                                : null;
+                            const displayVersion = currentVer ? currentVer.version : versions[0].version;
+                            cell.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">
+                                <span class="tag" style="background:#e3f2fd;color:#1565c0;">v${escapeHtml(displayVersion)}</span>
+                                <span class="tag" style="background:#f3e5f5;color:#7b1fa2;cursor:pointer;" onclick="viewVersions(${doc.docId})">历史版本</span>
+                            </div>`;
+                        } else {
+                            cell.innerHTML = `<span style="color:#999;font-size:13px;">-</span>`;
+                        }
+                    }
+                } catch (e) { /* ignore */ }
+            }));
+        }
+
+        function renderPagination() {
+            document.getElementById('pageInfo').textContent = `${currentPage} / ${totalPages}`;
+            document.getElementById('prevBtn').disabled = currentPage <= 1;
+            document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+        }
+
+        function searchDocuments() { currentPage = 1; loadDocuments(); }
+        function resetFilter() {
+            document.getElementById('filterTitle').value = '';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterType').value = '';
+            currentPage = 1;
+            loadDocuments();
+        }
+        function changePage(page) {
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            loadDocuments();
+        }
+
+        // ===== 选择 =====
+        function toggleSelect(id) {
+            if (selectedIds.has(id)) selectedIds.delete(id);
+            else selectedIds.add(id);
+            const checkboxes = document.querySelectorAll('#docTableBody input[type=checkbox]');
+            document.getElementById('selectAll').checked = [...checkboxes].every(cb => cb.checked);
+        }
+        function toggleSelectAll() {
+            const checked = document.getElementById('selectAll').checked;
+            document.querySelectorAll('#docTableBody input[type=checkbox]').forEach(cb => {
+                cb.checked = checked;
+                const id = parseInt(cb.value);
+                if (checked) selectedIds.add(id); else selectedIds.delete(id);
+            });
+        }
+
+        // ===== 新增/编辑 =====
+        // 编辑模式下只读的字段（仅标题和描述可修改）
+        const READONLY_FIELDS = ['editType', 'editStatus', 'editAccessible'];
+
+        async function openEditModal(docId) {
+            document.getElementById('editForm').reset();
+            document.getElementById('editLockVersion').value = 0;
+            if (docId) {
+                document.getElementById('editModalTitle').textContent = '编辑文档';
+                // 编辑模式：禁用除标题和描述外的字段
+                READONLY_FIELDS.forEach(id => document.getElementById(id).disabled = true);
+                try {
+                    const res = await fetch(`/api/document/${docId}`);
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    const doc = await res.json();
+                    document.getElementById('editDocId').value = doc.docId;
+                    document.getElementById('editLockVersion').value = doc.lockVersion || 0;
+                    document.getElementById('editTitle').value = doc.docTitle || '';
+                    document.getElementById('editType').value = doc.knowledgeBaseType || '';
+                    document.getElementById('editStatus').value = doc.status || 'INIT';
+                    document.getElementById('editAccessible').value = doc.accessibleBy || '';
+                    document.getElementById('editDesc').value = doc.description || '';
+                } catch (e) {
+                    showToast('加载文档详情失败: ' + e.message, 'error');
+                    return;
+                }
+            } else {
+                document.getElementById('editModalTitle').textContent = '新增文档';
+                // 新增模式：启用所有字段
+                READONLY_FIELDS.forEach(id => document.getElementById(id).disabled = false);
+                document.getElementById('editDocId').value = '';
+                document.getElementById('editStatus').value = 'INIT';
+            }
+            document.getElementById('editModal').classList.add('show');
+        }
+
+        async function saveDocument() {
+            const docId = document.getElementById('editDocId').value;
+            const isEdit = !!docId;
+            const data = {
+                docTitle: document.getElementById('editTitle').value.trim(),
+                description: document.getElementById('editDesc').value.trim(),
+                lockVersion: parseInt(document.getElementById('editLockVersion').value) || 0
+            };
+            if (!data.docTitle) { showToast('请输入文档标题', 'error'); return; }
+
+            if (isEdit) {
+                // 编辑模式：只提交标题、描述和乐观锁
+                data.docId = parseInt(docId);
+            } else {
+                // 新增模式：提交所有字段
+                data.knowledgeBaseType = document.getElementById('editType').value;
+                data.status = document.getElementById('editStatus').value;
+                data.accessibleBy = document.getElementById('editAccessible').value;
+                if (!data.knowledgeBaseType) { showToast('请选择知识库类型', 'error'); return; }
+            }
+
+            try {
+                const res = await fetch('/api/document', {
+                    method: isEdit ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const result = await res.json();
+                if (result) {
+                    showToast(isEdit ? '更新成功' : '新增成功');
+                    closeModal('editModal');
+                    loadDocuments();
+                } else {
+                    showToast('操作失败', 'error');
+                }
+            } catch (e) {
+                showToast('保存失败: ' + e.message, 'error');
+            }
+        }
+
+        // ===== 删除 =====
+        async function deleteDocument(docId) {
+            if (!confirm('确认删除该文档？删除后将同时删除其下所有分段。')) return;
+            try {
+                const res = await fetch(`/api/document/${docId}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const result = await res.json();
+                if (result) { showToast('删除成功'); loadDocuments(); }
+                else showToast('删除失败', 'error');
+            } catch (e) {
+                showToast('删除失败: ' + e.message, 'error');
+            }
+        }
+
+        async function batchDelete() {
+            if (selectedIds.size === 0) { showToast('请先选择要删除的文档', 'error'); return; }
+            if (!confirm(`确认删除选中的 ${selectedIds.size} 个文档？将同时删除其下所有分段。`)) return;
+            const ids = [...selectedIds].join(',');
+            try {
+                const res = await fetch(`/api/document/batch?ids=${ids}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const result = await res.json();
+                if (result) { showToast('批量删除成功'); loadDocuments(); }
+                else showToast('批量删除失败', 'error');
+            } catch (e) {
+                showToast('批量删除失败: ' + e.message, 'error');
+            }
+        }
+
+        // ===== 版本管理 =====
+        async function openVersionModal(docId) {
+            const doc = docRecords.find(d => d.docId === docId);
+            const docTitle = doc ? (doc.docTitle || '') : '';
+            document.getElementById('versionDocTitle').textContent = `- ${docTitle}`;
+            document.getElementById('versionDocId').value = docId;
+            document.getElementById('versionNumber').value = '';
+            document.getElementById('versionChangelog').value = '';
+            document.getElementById('versionFile').value = '';
+
+            // 获取已有版本列表，自动建议下一个版本号
+            try {
+                const res = await fetch(`/api/document/versions/${docId}`);
+                if (res.ok) {
+                    const versions = await res.json();
+                    if (versions.length > 0) {
+                        // 版本列表已按降序排序，取第一个为最新版本
+                        const latestVersion = versions[0].version;
+                        // 主版本号 +1 作为建议版本
+                        const parts = latestVersion.split('.');
+                        const nextMajor = parseInt(parts[0]) + 1;
+                        document.getElementById('versionNumber').value = `${nextMajor}.0.0`;
+                    } else {
+                        document.getElementById('versionNumber').value = '1.0.0';
+                    }
+                }
+            } catch (e) { /* ignore */ }
+
+            document.getElementById('versionModal').classList.add('show');
+        }
+
+        async function submitVersion() {
+            const docId = document.getElementById('versionDocId').value;
+            const version = document.getElementById('versionNumber').value;
+            const changelog = document.getElementById('versionChangelog').value.trim();
+            const fileInput = document.getElementById('versionFile');
+
+            if (!version || !/^\d+\.\d+\.\d+$/.test(version)) { showToast('请输入有效的版本号（如 2.0.0）', 'error'); return; }
+            if (!fileInput.files || !fileInput.files[0]) { showToast('请选择文件', 'error'); return; }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('docId', docId);
+            formData.append('version', version);
+            if (changelog) formData.append('changelog', changelog);
+
+            try {
+                const res = await fetch('/api/document/upload-version', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!res.ok) {
+                    const errText = await res.text();
+                    showToast(errText || '上传失败', 'error');
+                    return;
+                }
+                const doc = await res.json();
+                showToast(`新版本 v${version} 上传成功`);
+                closeModal('versionModal');
+                if (doc.knowledgeBaseType === 'DATA_QUERY') {
+                    showToast('DATA_QUERY 类型文档无需切片，数据已替换');
+                    loadDocuments();
+                } else {
+                    // 弹出切片设置弹窗，传入文档对象以回显上次分段参数
+                    openVersionSplitModal(doc);
+                }
+            } catch (e) {
+                showToast('上传失败: ' + e.message, 'error');
+            }
+        }
+
+        async function viewVersions(docId) {
+            const doc = docRecords.find(d => d.docId === docId);
+            const docTitle = doc ? (doc.docTitle || '') : '';
+            const currentVersionId = doc ? doc.currentVersionId : null;
+            document.getElementById('versionListTitle').textContent = `- ${docTitle}`;
+            document.getElementById('versionListContent').innerHTML = '<div class="empty-state">加载中...</div>';
+            document.getElementById('versionListModal').classList.add('show');
+            try {
+                const res = await fetch(`/api/document/versions/${docId}`);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const versions = await res.json();
+                if (!versions || versions.length === 0) {
+                    document.getElementById('versionListContent').innerHTML = '<div class="empty-state">暂无版本数据</div>';
+                    return;
+                }
+                const html = versions.map(v => {
+                    const isActive = currentVersionId && v.versionId === currentVersionId;
+                    const isLatest = v.version === versions[0].version;
+                    const borderColor = isActive ? '#28a745' : (v.version === '1.0.0' ? '#667eea' : '#adb5bd');
+                    const activeBadge = isActive ? '<span class="tag" style="background:#28a745;color:#fff;">当前版本</span>' : '';
+                    // DATA_QUERY 类型不支持切换到旧版本，只有最新版本才显示切换按钮
+                    const switchBtn = isActive || (doc.knowledgeBaseType === 'DATA_QUERY' && !isLatest)
+                        ? ''
+                        : `<button class="btn btn-sm btn-primary" style="margin-left:8px;" onclick="switchVersion(${docId}, ${v.versionId})">切换到此版本</button>`;
+                    const changelogHtml = v.changelog ? `<div style="padding:4px 12px;font-size:13px;color:#666;">变更说明：${escapeHtml(v.changelog)}</div>` : '';
+                    return `
+                    <div class="segment-item" style="border-left: 4px solid ${borderColor};">
+                        <div class="segment-item-header">
+                            <div class="segment-item-meta">
+                                <span class="tag" style="background:#e3f2fd;color:#1565c0;">v${v.version}</span>
+                                ${activeBadge}
+                                <span>${statusTag(v.status)}</span>
+                                <span>${escapeHtml(v.uploadUser || '-')}</span>
+                                <span>${formatTime(v.createdAt)}</span>
+                                ${switchBtn}
+                            </div>
+                            <div class="segment-actions">
+                                ${doc.knowledgeBaseType === 'DATA_QUERY'
+                                    ? (isLatest ? `<button class="btn btn-sm btn-success" onclick="viewData(${docId})">查看数据</button>` : '')
+                                    : `<button class="btn btn-sm btn-success" onclick="viewSegmentsFromVersion(${docId}, ${v.versionId}, 'v${v.version}')">查看分段</button>`}
+                            </div>
+                        </div>
+                        ${changelogHtml}
+                        <div style="padding:8px 12px;font-size:13px;color:#555;">
+                            ${escapeHtml(v.docUrl || '-')}
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+                document.getElementById('versionListContent').innerHTML = html;
+            } catch (e) {
+                document.getElementById('versionListContent').innerHTML = `<div class="empty-state">加载失败: ${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        async function switchVersion(docId, versionId) {
+            const doc = docRecords.find(d => d.docId === docId);
+            const confirmMsg = doc && doc.knowledgeBaseType === 'DATA_QUERY'
+                ? '确认切换版本？'
+                : '切换版本后需要重新切片，旧版本数据将在新版本向量化完成后自动清理。确认切换？';
+            if (!confirm(confirmMsg)) return;
+            try {
+                const res = await fetch(`/api/document/switch-version?docId=${docId}&versionId=${versionId}`, { method: 'POST' });
+                if (!res.ok) {
+                    const errText = await res.text();
+                    showToast(errText || '切换失败', 'error');
+                    return;
+                }
+                const doc = await res.json();
+                showToast('版本切换成功');
+                closeModal('versionListModal');
+                // 刷新文档列表
+                loadDocuments();
+            } catch (e) {
+                showToast('切换失败: ' + e.message, 'error');
+            }
+        }
+
+        // ===== 分段查看 =====
+        async function viewSegments(docId) {
+            const doc = docRecords.find(d => d.docId === docId);
+            const docTitle = doc ? (doc.docTitle || '') : '';
+            segmentDocId = docId;
+            segmentVersionId = doc ? (doc.currentVersionId || null) : null;
+            segmentCurrentPage = 1;
+            document.getElementById('segmentDocTitle').textContent = `- ${docTitle}`;
+            document.getElementById('segmentModal').classList.add('show');
+            await loadSegmentCount();
+            await loadSegments();
+        }
+
+        /**
+         * 从版本列表弹窗点击「查看分段」时调用，按指定版本过滤分段
+         * @param {number} docId        文档ID
+         * @param {number} versionId    版本ID
+         * @param {string} versionLabel 版本显示标签（如 "v2.0.0"）
+         */
+        async function viewSegmentsFromVersion(docId, versionId, versionLabel) {
+            segmentDocId = docId;
+            segmentVersionId = versionId;
+            segmentCurrentPage = 1;
+            document.getElementById('segmentDocTitle').textContent = ` ${versionLabel}`;
+            document.getElementById('segmentModal').classList.add('show');
+            await loadSegmentCount();
+            await loadSegments();
+        }
+
+        async function loadSegmentCount() {
+            try {
+                const params = new URLSearchParams();
+                params.append('documentId', segmentDocId);
+                if (segmentVersionId != null) params.append('documentVersion', segmentVersionId);
+                const res = await fetch(`/api/segment/count-by-document?${params}`);
+                if (res.ok) {
+                    const count = await res.json();
+                    document.getElementById('segmentCount').textContent = `共 ${count} 个分段`;
+                }
+            } catch (e) { /* ignore */ }
+        }
+
+        async function loadSegments() {
+            const params = new URLSearchParams();
+            params.append('documentId', segmentDocId);
+            if (segmentVersionId != null) params.append('documentVersion', segmentVersionId);
+            params.append('current', segmentCurrentPage);
+            params.append('size', segmentPageSize);
+            try {
+                const res = await fetch(`/api/segment/page-by-document?${params}`);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const page = await res.json();
+                segmentTotalPages = page.pages || 1;
+                renderSegments(page.records || []);
+                document.getElementById('segPageInfo').textContent = `${segmentCurrentPage} / ${segmentTotalPages}`;
+                document.getElementById('segPrevBtn').disabled = segmentCurrentPage <= 1;
+                document.getElementById('segNextBtn').disabled = segmentCurrentPage >= segmentTotalPages;
+            } catch (e) {
+                document.getElementById('segmentList').innerHTML = `<div class="empty-state">加载失败: ${e.message}</div>`;
+            }
+        }
+
+        function renderSegments(records) {
+            if (!records || records.length === 0) {
+                document.getElementById('segmentList').innerHTML = '<div class="empty-state">暂无分段数据</div>';
+                return;
+            }
+            const html = records.map(seg => {
+                const meta = parseMetadata(seg.metadata);
+                const segTags = getSegmentTypeTags(seg, meta);
+                return `
+                <div class="segment-item ${segTags.itemClass}">
+                    <div class="segment-item-header">
+                        <div class="segment-item-meta">
+                            <span>#${seg.chunkOrder ?? seg.id}</span>
+                            ${seg.documentVersion ? `<span class="tag" style="background:#f3e5f5;color:#7b1fa2;">版本#${seg.documentVersion}</span>` : ''}
+                            <span>${seg.embeddingId ? 'Embedding: ' + escapeHtml(seg.embeddingId) : ''}</span>
+                            <span>${statusTag(seg.status)}</span>
+                            ${segTags.tagHtml}
+                        </div>
+                        <div class="segment-actions">
+                            <button class="btn btn-sm btn-success" onclick="viewSegmentMeta(${seg.id})">Meta</button>
+                            <button class="btn btn-sm btn-warning" onclick="editSegment(${seg.id})">编辑</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteSegment(${seg.id})">删除</button>
+                        </div>
+                    </div>
+                    <div class="segment-item-text" id="segText${seg.id}">${escapeHtml(seg.text)}</div>
+                    <div class="segment-toggle" onclick="toggleSegmentText(${seg.id})">展开/收起</div>
+                </div>
+                `;
+            }).join('');
+            document.getElementById('segmentList').innerHTML = html;
+        }
+
+        // 解析 metadata JSON 字符串
+        function parseMetadata(metadataStr) {
+            if (!metadataStr) return {};
+            try {
+                return JSON.parse(metadataStr);
+            } catch (e) {
+                return {};
+            }
+        }
+
+        // 根据分段属性和 metadata 判断分段类型，返回标签 HTML 和样式类
+        function getSegmentTypeTags(seg, meta) {
+            const tags = [];
+            const classes = [];
+
+            // 父分段：skipEmbedding=1，存储完整文本但不参与向量检索
+            if (seg.skipEmbedding === 1 || seg.skipEmbedding === '1') {
+                tags.push('<span class="tag tag-parent">父分段</span>');
+                classes.push('segment-parent');
+            }
+
+            // 子分段：metadata 中有 parentChunkId
+            if (meta.parentChunkId) {
+                tags.push('<span class="tag tag-child">子分段</span>');
+                if (!classes.includes('segment-parent')) {
+                    classes.push('segment-child');
+                }
+            }
+
+            // 兄弟分段：metadata 中有 brotherChunkId
+            if (meta.brotherChunkId) {
+                const idx = meta.brotherChunkIndex;
+                const total = meta.brotherChunkTotal;
+                const label = (idx != null && total != null) ? `兄弟 ${idx}/${total}` : '兄弟分段';
+                tags.push(`<span class="tag tag-brother">${label}</span>`);
+                if (!classes.includes('segment-parent') && !classes.includes('segment-child')) {
+                    classes.push('segment-brother');
+                }
+            }
+
+            return { tagHtml: tags.join(' '), itemClass: classes.join(' ') };
+        }
+
+        function toggleSegmentText(id) {
+            const el = document.getElementById('segText' + id);
+            if (el) el.classList.toggle('expanded');
+        }
+
+        function changeSegmentPage(page) {
+            if (page < 1 || page > segmentTotalPages) return;
+            segmentCurrentPage = page;
+            loadSegments();
+        }
+
+        // ===== 数据预览 =====
+        async function viewData(docId) {
+            const doc = docRecords.find(d => d.docId === docId);
+            const docTitle = doc ? (doc.docTitle || '') : '';
+            dataDocId = docId;
+            dataCurrentPage = 1;
+            document.getElementById('dataDocTitle').textContent = `- ${docTitle}`;
+            document.getElementById('dataModal').classList.add('show');
+            await loadData();
+        }
+
+        async function loadData() {
+            const head = document.getElementById('dataTableHead');
+            const body = document.getElementById('dataTableBody');
+            body.innerHTML = '<tr><td colspan="999"><div class="empty-state">加载中...</div></td></tr>';
+            try {
+                const params = new URLSearchParams();
+                params.append('current', dataCurrentPage);
+                params.append('size', dataPageSize);
+                const res = await fetch(`/api/document/data/${dataDocId}?${params}`);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const page = await res.json();
+                dataTotalPages = page.pages || 1;
+                document.getElementById('dataCount').textContent = `共 ${page.total || 0} 条数据`;
+                renderDataTable(page.records || []);
+                document.getElementById('dataPageInfo').textContent = `${dataCurrentPage} / ${dataTotalPages}`;
+                document.getElementById('dataPrevBtn').disabled = dataCurrentPage <= 1;
+                document.getElementById('dataNextBtn').disabled = dataCurrentPage >= dataTotalPages;
+            } catch (e) {
+                body.innerHTML = `<tr><td colspan="999"><div class="empty-state">加载失败: ${escapeHtml(e.message)}</div></td></tr>`;
+                head.innerHTML = '';
+            }
+        }
+
+        function renderDataTable(records) {
+            const head = document.getElementById('dataTableHead');
+            const body = document.getElementById('dataTableBody');
+            head.innerHTML = '';
+            body.innerHTML = '';
+            if (!records || records.length === 0) {
+                body.innerHTML = '<tr><td colspan="999"><div class="empty-state">暂无数据</div></td></tr>';
+                return;
+            }
+            const columns = Object.keys(records[0]);
+            head.innerHTML = '<tr>' + columns.map(col => `<th>${escapeHtml(col)}</th>`).join('') + '</tr>';
+            body.innerHTML = records.map(row => '<tr>' + columns.map(col => `<td>${escapeHtml(formatDataValue(row[col]))}</td>`).join('') + '</tr>').join('');
+        }
+
+        function formatDataValue(value) {
+            if (value === null || value === undefined) return '-';
+            if (typeof value === 'object') return JSON.stringify(value);
+            return String(value);
+        }
+
+        function changeDataPage(page) {
+            if (page < 1 || page > dataTotalPages) return;
+            dataCurrentPage = page;
+            loadData();
+        }
+
+        // ===== 分段编辑 =====
+        async function editSegment(segId) {
+            try {
+                const res = await fetch(`/api/segment/${segId}`);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const seg = await res.json();
+                // 父分段禁止直接编辑，提示用户修改子分段
+                if (seg.skipEmbedding === 1 || seg.skipEmbedding === '1') {
+                    showToast('父分段不支持直接编辑，请修改对应的子分段，父分段内容会自动同步', 'warning');
+                    return;
+                }
+                document.getElementById('segEditId').value = seg.id;
+                document.getElementById('segEditLockVersion').value = seg.lockVersion || 0;
+                document.getElementById('segEditDocId').value = seg.documentId || '';
+                document.getElementById('segEditChunkId').value = seg.chunkId || '';
+                document.getElementById('segEditChunkOrder').value = seg.chunkOrder || '';
+                document.getElementById('segEditText').value = seg.text || '';
+                document.getElementById('segmentEditModal').classList.add('show');
+            } catch (e) {
+                showToast('加载分段详情失败: ' + e.message, 'error');
+            }
+        }
+
+        async function saveSegment() {
+            const data = {
+                id: parseInt(document.getElementById('segEditId').value),
+                text: document.getElementById('segEditText').value,
+                documentId: parseInt(document.getElementById('segEditDocId').value) || null,
+                chunkId: document.getElementById('segEditChunkId').value || null,
+                chunkOrder: parseInt(document.getElementById('segEditChunkOrder').value) || null,
+                lockVersion: parseInt(document.getElementById('segEditLockVersion').value) || 0
+            };
+            try {
+                const res = await fetch('/api/segment', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const result = await res.json();
+                if (result) {
+                    showToast('分段更新成功');
+                    closeModal('segmentEditModal');
+                    loadSegments();
+                } else showToast('更新失败', 'error');
+            } catch (e) {
+                showToast('保存失败: ' + e.message, 'error');
+            }
+        }
+
+        async function deleteSegment(segId) {
+            if (!confirm('确认删除该分段？')) return;
+            try {
+                const res = await fetch(`/api/segment/${segId}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const result = await res.json();
+                if (result) {
+                    showToast('删除成功');
+                    loadSegmentCount();
+                    loadSegments();
+                } else showToast('删除失败', 'error');
+            } catch (e) {
+                showToast('删除失败: ' + e.message, 'error');
+            }
+        }
+
+        // ===== 文档扩展信息 =====
+        async function viewExtension(docId) {
+            const doc = docRecords.find(d => d.docId === docId);
+            const docTitle = doc ? (doc.docTitle || '') : '';
+            document.getElementById('extDocTitle').textContent = `- ${docTitle}`;
+            document.getElementById('extensionContent').innerHTML = '<div class="json-empty">加载中...</div>';
+            document.getElementById('extensionModal').classList.add('show');
+            try {
+                const res = await fetch(`/api/document/${docId}`);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const doc = await res.json();
+                renderJson('extensionContent', doc.extension);
+            } catch (e) {
+                document.getElementById('extensionContent').innerHTML = `<div class="json-empty">加载失败: ${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        // ===== 分段 Meta 信息 =====
+        async function viewSegmentMeta(segId) {
+            document.getElementById('metaSegId').textContent = `- #${segId}`;
+            document.getElementById('segmentMetaContent').innerHTML = '<div class="json-empty">加载中...</div>';
+            document.getElementById('segmentMetaModal').classList.add('show');
+            try {
+                const res = await fetch(`/api/segment/${segId}`);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const seg = await res.json();
+                renderJson('segmentMetaContent', seg.metadata);
+            } catch (e) {
+                document.getElementById('segmentMetaContent').innerHTML = `<div class="json-empty">加载失败: ${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        // JSON 格式化展示（使用 textContent 防 XSS）
+        function renderJson(containerId, jsonStr) {
+            const container = document.getElementById(containerId);
+            if (!jsonStr) {
+                container.innerHTML = '<div class="json-empty">暂无数据</div>';
+                return;
+            }
+            const pre = document.createElement('pre');
+            pre.className = 'json-viewer';
+            try {
+                const parsed = JSON.parse(jsonStr);
+                pre.textContent = JSON.stringify(parsed, null, 2);
+            } catch (e) {
+                pre.textContent = jsonStr;
+            }
+            container.innerHTML = '';
+            container.appendChild(pre);
+        }
+
+        // ===== 通用 =====
+        function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+        // ===== 版本上传后切片 =====
+        function openVersionSplitModal(doc) {
+            document.getElementById('versionSplitDocId').value = doc.docId;
+            document.getElementById('versionSplitTitle').textContent = doc.docTitle ? `- ${doc.docTitle}` : '';
+            document.getElementById('versionSplitForm').reset();
+            // 隐藏所有参数组
+            ['versionSplitOverlapGroup', 'versionSplitTitleLevelGroup', 'versionSplitRegexGroup', 'versionSplitSeparatorGroup']
+                .forEach(id => document.getElementById(id).classList.remove('show'));
+
+            // 从 extension 中解析上次分段参数并回显
+            if (doc.extension) {
+                try {
+                    const ext = JSON.parse(doc.extension);
+                    if (ext.splitParam) {
+                        const sp = ext.splitParam;
+                        if (sp.splitType) document.getElementById('versionSplitType').value = sp.splitType;
+                        if (sp.chunkSize) document.getElementById('versionSplitChunkSize').value = sp.chunkSize;
+                        if (sp.overlap != null) document.getElementById('versionSplitOverlap').value = sp.overlap;
+                        if (sp.titleLevel != null) document.getElementById('versionSplitTitleLevel').value = sp.titleLevel;
+                        if (sp.regex) document.getElementById('versionSplitRegex').value = sp.regex;
+                        if (sp.separator) document.getElementById('versionSplitSeparator').value = sp.separator;
+                        // 触发 change 事件以显示/隐藏对应参数组
+                        document.getElementById('versionSplitType').dispatchEvent(new Event('change'));
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            document.getElementById('versionSplitModal').classList.add('show');
+        }
+
+        document.getElementById('versionSplitType').addEventListener('change', function() {
+            const splitType = this.value;
+            ['versionSplitOverlapGroup', 'versionSplitTitleLevelGroup', 'versionSplitRegexGroup', 'versionSplitSeparatorGroup']
+                .forEach(id => document.getElementById(id).classList.remove('show'));
+            if (splitType === 'LENGTH' || splitType === 'TITLE') {
+                document.getElementById('versionSplitOverlapGroup').classList.add('show');
+            }
+            if (splitType === 'TITLE') {
+                document.getElementById('versionSplitTitleLevelGroup').classList.add('show');
+            }
+            if (splitType === 'REGEX') {
+                document.getElementById('versionSplitRegexGroup').classList.add('show');
+            }
+            if (splitType === 'SEPARATOR') {
+                document.getElementById('versionSplitSeparatorGroup').classList.add('show');
+            }
+        });
+
+        async function submitVersionSplit() {
+            const docId = document.getElementById('versionSplitDocId').value;
+            const splitType = document.getElementById('versionSplitType').value;
+            const chunkSize = document.getElementById('versionSplitChunkSize').value;
+            const overlap = document.getElementById('versionSplitOverlap').value || 0;
+            const titleLevel = document.getElementById('versionSplitTitleLevel').value || '';
+            const regex = document.getElementById('versionSplitRegex').value || '';
+            const separator = document.getElementById('versionSplitSeparator').value || '';
+
+            if (!splitType) { showToast('请选择切片方式', 'error'); return; }
+            if (!chunkSize || chunkSize < 1) { showToast('请输入有效的最大分段长度', 'error'); return; }
+
+            const params = new URLSearchParams();
+            params.append('splitType', splitType);
+            params.append('chunkSize', chunkSize);
+            params.append('overlap', overlap);
+            params.append('titleLevel', titleLevel);
+            params.append('regex', regex);
+            params.append('separator', separator);
+
+            const btn = document.getElementById('versionSplitBtn');
+            btn.disabled = true;
+            btn.textContent = '切片中...';
+
+            try {
+                const res = await fetch(`/api/document/split/${docId}?${params.toString()}`, { method: 'POST' });
+                if (res.ok) {
+                    const count = await res.json();
+                    showToast(`切片完成，共 ${count} 个片段`);
+                    closeModal('versionSplitModal');
+                    loadDocuments();
+                } else {
+                    const errText = await res.text();
+                    showToast(errText || '切片失败', 'error');
+                }
+            } catch (e) {
+                showToast('切片失败: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '开始切片';
+            }
+        }
+        // 点击遮罩关闭弹窗
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('show'); });
+        });
+        // 回车搜索
+        document.getElementById('filterTitle').addEventListener('keydown', e => { if (e.key === 'Enter') searchDocuments(); });
+
+        // 初始化：员工登录态校验
+        (async function checkStaffLogin() {
+            try {
+                const resp = await fetch('/auth/isLogin');
+                const data = await resp.json();
+                if (data.code !== 200 || data.data !== true) {
+                    window.location.href = '/staff-login.html';
+                    return;
+                }
+                const userResp = await fetch('/auth/userInfo');
+                const userData = await userResp.json();
+                if (userData.code !== 200 || !userData.data || userData.data.userType !== 'staff') {
+                    await fetch('/auth/logout', { method: 'POST' });
+                    window.location.href = '/staff-login.html';
+                    return;
+                }
+                // 显示当前登录员工名称
+                const navbar = document.querySelector('.navbar');
+                if (navbar && !document.getElementById('staffName')) {
+                    const span = document.createElement('span');
+                    span.id = 'staffName';
+                    span.style.cssText = 'font-size:14px;color:#667eea;margin-left:12px;';
+                    span.textContent = '当前员工：' + (userData.data.name || '');
+                    navbar.querySelector('h1').appendChild(span);
+                }
+                loadDocuments();
+            } catch (e) {
+                window.location.href = '/staff-login.html';
+            }
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+# Build output
+target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local ONNX model files (too large for GitHub, > 100MB single-file limit)
+src/main/resources/model/bge-reranker-model/*.onnx
+
+# Logs
+*.log
+logs/
+
+# Local env files
+.env
+.env.local

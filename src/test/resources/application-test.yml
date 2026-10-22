@@ -1,0 +1,73 @@
+server:
+  port: 8009
+
+spring:
+  application:
+    name: KnowEngine-Test
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 100MB
+      max-request-size: 100MB
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    url: jdbc:mysql://127.0.0.1:3306/know_engine?rewriteBatchedStatements=true
+    username: know_engine
+    password: know_engine
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    druid:
+      initial-size: 2
+      min-idle: 2
+      max-active: 10
+      max-wait: 60000
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: knowengine
+      ssl:
+        enabled: true
+  redis:
+    redisson:
+      config: |
+        singleServerConfig:
+          idleConnectionTimeout: 10000
+          connectTimeout: 10000
+          timeout: 3000
+          retryAttempts: 3
+          retryInterval: 1500
+          password: knowengine
+          subscriptionsPerConnection: 5
+          address: "redis://localhost:6379"
+          database: 0
+        threads: 4
+        nettyThreads: 8
+        codec: !<org.redisson.codec.JsonJacksonCodec> {}
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  mapper-locations: classpath*:/mapper/**/*.xml
+
+# LangChain4j 配置 - 用于意图识别测试
+langchain4j:
+  open-ai:
+    chat-model:
+      api-key: ${DASHSCOPE_API_KEY:sk-xxx} # 通过环境变量注入你自己的 Key
+      model-name: qwen-max
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      log-requests: true
+      log-responses: true
+    streaming-chat-model:
+      api-key: ${DASHSCOPE_API_KEY:sk-xxx} # 通过环境变量注入你自己的 Key
+      model-name: qwen-max
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      log-requests: true
+      log-responses: true
+
+# 日志配置
+logging:
+  level:
+    com.chaconez.knowengine: DEBUG
+    dev.langchain4j: DEBUG

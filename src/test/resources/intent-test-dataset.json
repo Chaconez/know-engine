@@ -1,0 +1,852 @@
+[
+  {
+    "id": 1,
+    "category": "售前咨询与购买",
+    "input": "你们店里有比亚迪汉吗？我想看看实车",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 2,
+    "category": "售前咨询与购买",
+    "input": "Model Y和理想L7哪个空间大？",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 3,
+    "category": "售前咨询与购买",
+    "input": "这个配置值得加钱选装吗？",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 4,
+    "category": "售前咨询与购买",
+    "input": "现在买车有置换补贴吗？",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 5,
+    "category": "售前咨询与购买",
+    "input": "我想贷款买车，首付最低多少？利息怎么算？",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 6,
+    "category": "售前咨询与购买",
+    "input": "现在有免息贷款吗？需要什么条件？",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 7,
+    "category": "售前咨询与购买",
+    "input": "可以安排试驾吗？周末有空",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 8,
+    "category": "售前咨询与购买",
+    "input": "我想预约明天下午3点试驾汉EV",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 9,
+    "category": "售前咨询与购买",
+    "input": "你们在北京有几家店？地址在哪？",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 10,
+    "category": "售前咨询与购买",
+    "input": "最近的4S店怎么走？",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 11,
+    "category": "售后维修与保养",
+    "input": "我想预约下周三做保养",
+    "expected": {
+      "related": true,
+      "intent": "售后维修与保养"
+    }
+  },
+  {
+    "id": 12,
+    "category": "售后维修与保养",
+    "input": "车子该做首保了，怎么预约？",
+    "expected": {
+      "related": true,
+      "intent": "售后维修与保养"
+    }
+  },
+  {
+    "id": 13,
+    "category": "售后维修与保养",
+    "input": "我的车发动机有异响，是什么原因？",
+    "expected": {
+      "related": true,
+      "intent": "售后维修与保养"
+    }
+  },
+  {
+    "id": 14,
+    "category": "售后维修与保养",
+    "input": "车子启动的时候有抖动，需要去店里看看吗？",
+    "expected": {
+      "related": true,
+      "intent": "售后维修与保养"
+    }
+  },
+  {
+    "id": 15,
+    "category": "售后维修与保养",
+    "input": "我的车昨天送修的，现在修好了吗？",
+    "expected": {
+      "related": true,
+      "intent": "售后维修与保养"
+    }
+  },
+  {
+    "id": 16,
+    "category": "售后维修与保养",
+    "input": "工单号WX123456，维修进度怎么样？",
+    "expected": {
+      "related": true,
+      "intent": "售后维修与保养"
+    }
+  },
+  {
+    "id": 17,
+    "category": "售后维修与保养",
+    "input": "换个原厂刹车片多少钱？",
+    "expected": {
+      "related": true,
+      "intent": "售后维修与保养"
+    }
+  },
+  {
+    "id": 18,
+    "category": "售后维修与保养",
+    "input": "我的雨刮器刮不干净了，去你们那换一个多少钱？",
+    "expected": {
+      "related": true,
+      "intent": "售后维修与保养"
+    }
+  },
+  {
+    "id": 19,
+    "category": "车辆使用与技术指导",
+    "input": "中控屏怎么连接手机蓝牙？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 20,
+    "category": "车辆使用与技术指导",
+    "input": "我想自己加玻璃水，但是找不到盖子在哪，能教我一下吗？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 21,
+    "category": "车辆使用与技术指导",
+    "input": "定速巡航怎么开启？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 22,
+    "category": "车辆使用与技术指导",
+    "input": "仪表盘上这个黄色感叹号是什么意思？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 23,
+    "category": "车辆使用与技术指导",
+    "input": "我的车仪表盘上亮了个像水龙头一样的黄灯，这是什么意思？还能继续开吗？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 24,
+    "category": "车辆使用与技术指导",
+    "input": "混动版的车，它的能量回收系统是怎么工作的？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 25,
+    "category": "车辆使用与技术指导",
+    "input": "涡轮增压和自然吸气有什么区别？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 26,
+    "category": "车辆使用与技术指导",
+    "input": "我的车是2023款的，想换个更大容量的电瓶，原厂能换吗？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 27,
+    "category": "车辆使用与技术指导",
+    "input": "可以自己换LED大灯吗？会影响质保吗？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 34,
+    "category": "投诉与维权",
+    "input": "我刚提的新车，才开了一周，今天发现中控屏老是死机，太影响心情了！",
+    "expected": {
+      "related": true,
+      "intent": "投诉与维权"
+    }
+  },
+  {
+    "id": 35,
+    "category": "投诉与维权",
+    "input": "这车买了半年，变速箱顿挫严重，明显是质量问题！",
+    "expected": {
+      "related": true,
+      "intent": "投诉与维权"
+    }
+  },
+  {
+    "id": 36,
+    "category": "投诉与维权",
+    "input": "你们4S店的服务态度太差了，爱答不理的！",
+    "expected": {
+      "related": true,
+      "intent": "投诉与维权"
+    }
+  },
+  {
+    "id": 37,
+    "category": "投诉与维权",
+    "input": "维修顾问态度恶劣，我要投诉他！",
+    "expected": {
+      "related": true,
+      "intent": "投诉与维权"
+    }
+  },
+  {
+    "id": 38,
+    "category": "投诉与维权",
+    "input": "上次维修后问题根本没解决，现在又不认账！",
+    "expected": {
+      "related": true,
+      "intent": "投诉与维权"
+    }
+  },
+  {
+    "id": 39,
+    "category": "投诉与维权",
+    "input": "明明在质保期内，你们却说不能免费修？",
+    "expected": {
+      "related": true,
+      "intent": "投诉与维权"
+    }
+  },
+  {
+    "id": 40,
+    "category": "投诉与维权",
+    "input": "这车刹车有问题，差点出事故，我要退车！",
+    "expected": {
+      "related": true,
+      "intent": "投诉与维权"
+    }
+  },
+  {
+    "id": 41,
+    "category": "投诉与维权",
+    "input": "车辆自燃了，厂家必须给个说法，否则法院见！",
+    "expected": {
+      "related": true,
+      "intent": "投诉与维权"
+    }
+  },
+  {
+    "id": 42,
+    "category": "其他",
+    "input": "谢谢",
+    "expected": {
+      "related": true,
+      "intent": "其他"
+    }
+  },
+  {
+    "id": 43,
+    "category": "其他",
+    "input": "好的",
+    "expected": {
+      "related": true,
+      "intent": "其他"
+    }
+  },
+  {
+    "id": 44,
+    "category": "闲聊与通用问答",
+    "input": "三岁小孩子不听话能不能打？",
+    "expected": {
+      "related": false,
+      "intent": "闲聊与通用问答"
+    }
+  },
+  {
+    "id": 45,
+    "category": "闲聊与通用问答",
+    "input": "明天北京天气怎么样？",
+    "expected": {
+      "related": false,
+      "intent": "闲聊与通用问答"
+    }
+  },
+  {
+    "id": 46,
+    "category": "闲聊与通用问答",
+    "input": "推荐几部好看的电视剧",
+    "expected": {
+      "related": false,
+      "intent": "闲聊与通用问答"
+    }
+  },
+  {
+    "id": 47,
+    "category": "闲聊与通用问答",
+    "input": "怎么做红烧肉？",
+    "expected": {
+      "related": false,
+      "intent": "闲聊与通用问答"
+    }
+  },
+  {
+    "id": 48,
+    "category": "闲聊与通用问答",
+    "input": "现在美国大选情况怎么样？",
+    "expected": {
+      "related": false,
+      "intent": "闲聊与通用问答"
+    }
+  },
+  {
+    "id": 49,
+    "category": "易混淆-维修vs技术",
+    "input": "雨刮器怎么换？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 50,
+    "category": "易混淆-维修vs技术",
+    "input": "雨刮器坏了，去店里换一个多少钱？",
+    "expected": {
+      "related": true,
+      "intent": "售后维修与保养"
+    }
+  },
+  {
+    "id": 51,
+    "category": "易混淆-咨询vs投诉",
+    "input": "发动机有异响是什么原因？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 52,
+    "category": "易混淆-咨询vs投诉",
+    "input": "发动机异响严重，这什么破质量，必须给我解决！",
+    "expected": {
+      "related": true,
+      "intent": "投诉与维权"
+    }
+  },
+  {
+    "id": 53,
+    "category": "边界场景",
+    "input": "车险怎么买比较划算？",
+    "expected": {
+      "related": true,
+      "intent": "汽车营销政策"
+    }
+  },
+  {
+    "id": 54,
+    "category": "边界场景",
+    "input": "新能源汽车和燃油车哪个好？",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 55,
+    "category": "边界场景",
+    "input": "车里有异味怎么办？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 56,
+    "category": "边界场景",
+    "input": "价格能便宜点吗？",
+    "expected": {
+      "related": true,
+      "intent": "汽车营销政策"
+    }
+  },
+  {
+    "id": 57,
+    "category": "边界场景",
+    "input": "二手车置换流程是怎样的？",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 58,
+    "category": "实体提取-车型",
+    "input": "特斯拉Model 3的续航是多少？",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买",
+      "entities": {
+        "car_model": "Model 3"
+      }
+    }
+  },
+  {
+    "id": 59,
+    "category": "实体提取-订单号",
+    "input": "我的订单号是ORD20240115001，帮我查一下进度",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买",
+      "entities": {
+        "order_id": "ORD20240115001"
+      }
+    }
+  },
+  {
+    "id": 61,
+    "category": "易混淆-DIY教程vs进店维修",
+    "input": "自己换机油难吗？需要什么工具？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 62,
+    "category": "易混淆-DIY教程vs进店维修",
+    "input": "你们店换机油多少钱？我想去店里换",
+    "expected": {
+      "related": true,
+      "intent": "售后维修与保养"
+    }
+  },
+  {
+    "id": 63,
+    "category": "易混淆-DIY教程vs进店维修",
+    "input": "空气滤芯在哪里？我想自己清理一下",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 64,
+    "category": "易混淆-DIY教程vs进店维修",
+    "input": "帮我预约个时间换空气滤芯",
+    "expected": {
+      "related": true,
+      "intent": "售后维修与保养"
+    }
+  },
+  {
+    "id": 65,
+    "category": "易混淆-技术咨询vs投诉",
+    "input": "中控屏经常卡顿怎么办？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 66,
+    "category": "易混淆-技术咨询vs投诉",
+    "input": "中控屏天天卡顿，什么垃圾车！我要退车！",
+    "expected": {
+      "related": true,
+      "intent": "投诉与维权"
+    }
+  },
+  {
+    "id": 67,
+    "category": "易混淆-技术咨询vs投诉",
+    "input": "我刚新买的就有异响了，你告诉我这是正常的？",
+    "expected": {
+      "related": true,
+      "intent": "投诉与维权"
+    }
+  },
+  {
+    "id": 68,
+    "category": "易混淆-技术咨询vs投诉",
+    "input": "新车就异响，你们这什么质量！订单号XYZ12345",
+    "expected": {
+      "related": true,
+      "intent": "投诉与维权",
+      "entities": {
+        "order_id": "XYZ12345"
+      }
+    }
+  },
+  {
+    "id": 69,
+    "category": "易混淆-技术原理vs故障咨询",
+    "input": "ABS防抱死系统是怎么工作的？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 70,
+    "category": "易混淆-技术原理vs故障咨询",
+    "input": "ABS灯亮了，需要检修吗？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 71,
+    "category": "易混淆-技术原理vs故障咨询",
+    "input": "自动启停功能是什么原理？为什么有时不工作？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 73,
+    "category": "非汽车相关-边界测试",
+    "input": "我今天想去自驾游，路线怎么规划？",
+    "expected": {
+      "related": true,
+      "intent": "客户关怀与运营"
+    }
+  },
+  {
+    "id": 74,
+    "category": "非汽车相关-边界测试",
+    "input": "我老公不让我买车怎么办？",
+    "expected": {
+      "related": false,
+      "intent": "闲聊与通用问答"
+    }
+  },
+  {
+    "id": 75,
+    "category": "非汽车相关-边界测试",
+    "input": "买车需要注意什么风水问题？",
+    "expected": {
+      "related": false,
+      "intent": "闲聊与通用问答"
+    }
+  },
+  {
+    "id": 76,
+    "category": "非汽车相关-边界测试",
+    "input": "开车戴口罩还是戴头盔？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 77,
+    "category": "非汽车相关-边界测试",
+    "input": "我想学驾照，你们有推荐的驾校吗？",
+    "expected": {
+      "related": false,
+      "intent": "闲聊与通用问答"
+    }
+  },
+  {
+    "id": 78,
+    "category": "非汽车相关-边界测试",
+    "input": "你们店有充电桩吗？能给手机充电吗？",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 79,
+    "category": "易混淆-售前vs售后",
+    "input": "这车保修期多长？",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 80,
+    "category": "易混淆-售前vs售后",
+    "input": "我的车还在保修期内，可以免费修吗？",
+    "expected": {
+      "related": true,
+      "intent": "售后维修与保养"
+    }
+  },
+  {
+    "id": 81,
+    "category": "易混淆-售前vs售后",
+    "input": "保养套餐多少钱？买车的时候可以一起买吗？",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 82,
+    "category": "易混淆-售前vs售后",
+    "input": "之前买的保养套餐怎么用？",
+    "expected": {
+      "related": true,
+      "intent": "售后维修与保养"
+    }
+  },
+  {
+    "id": 83,
+    "category": "实体提取-完整场景",
+    "input": "我刚提的新车，才开了一周，今天发现中控屏老是死机，太影响心情了！订单号XYZ12345。",
+    "expected": {
+      "related": true,
+      "intent": "投诉与维权",
+      "entities": {
+        "order_id": "XYZ12345",
+        "fault_description": "中控屏老是死机",
+        "function_name": "中控屏"
+      }
+    }
+  },
+  {
+    "id": 84,
+    "category": "实体提取-完整场景",
+    "input": "我的混动版车，能量回收系统感觉刹车不习惯，能给我讲讲原理吗？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导",
+      "entities": {
+        "car_model": "混动版",
+        "function_name": "能量回收系统"
+      }
+    }
+  },
+  {
+    "id": 85,
+    "category": "实体提取-完整场景",
+    "input": "我想预约明天下午3点去你们朝阳店做首保",
+    "expected": {
+      "related": true,
+      "intent": "售后维修与保养",
+      "entities": {
+        "dealer": "朝阳店",
+        "appointment_time": "明天下午3点"
+      }
+    }
+  },
+  {
+    "id": 86,
+    "category": "易混淆-闲聊vs咨询",
+    "input": "你好",
+    "expected": {
+      "related": false,
+      "intent": "闲聊与通用问答"
+    }
+  },
+  {
+    "id": 87,
+    "category": "易混淆-闲聊vs咨询",
+    "input": "你好，请问有人在吗？",
+    "expected": {
+      "related": false,
+      "intent": "闲聊与通用问答"
+    }
+  },
+  {
+    "id": 88,
+    "category": "易混淆-闲聊vs咨询",
+    "input": "你好，我想问下车险的事",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 89,
+    "category": "易混淆-投诉vs普通咨询",
+    "input": "上次保养换的机油有问题，车子现在抖动，质量怎么这么差？",
+    "expected": {
+      "related": true,
+      "intent": "投诉与维权"
+    }
+  },
+  {
+    "id": 90,
+    "category": "易混淆-投诉vs普通咨询",
+    "input": "上次保养后车子有点抖动，是什么原因？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 91,
+    "category": "易混淆-投诉vs普通咨询",
+    "input": "服务人员态度不好，希望能改进",
+    "expected": {
+      "related": true,
+      "intent": "投诉与维权"
+    }
+  },
+  {
+    "id": 92,
+    "category": "易混淆-投诉vs普通咨询",
+    "input": "请问你们营业时间是几点到几点？",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 93,
+    "category": "边界场景-模糊意图",
+    "input": "车子",
+    "expected": {
+      "related": true,
+      "intent": "其他"
+    }
+  },
+  {
+    "id": 94,
+    "category": "边界场景-模糊意图",
+    "input": "我的车",
+    "expected": {
+      "related": true,
+      "intent": "其他"
+    }
+  },
+  {
+    "id": 95,
+    "category": "边界场景-模糊意图",
+    "input": "有问题",
+    "expected": {
+      "related": false,
+      "intent": "其他"
+    }
+  },
+  {
+    "id": 96,
+    "category": "边界场景-复杂情绪",
+    "input": "你们的车确实不错，但是价格有点贵啊",
+    "expected": {
+      "related": true,
+      "intent": "售前咨询与购买"
+    }
+  },
+  {
+    "id": 97,
+    "category": "边界场景-复杂情绪",
+    "input": "修好了是修好了，但是等了也太久了吧",
+    "expected": {
+      "related": true,
+      "intent": "投诉与维权"
+    }
+  },
+  {
+    "id": 98,
+    "category": "边界场景-复杂情绪",
+    "input": "车是好车，就是售后服务有点慢",
+    "expected": {
+      "related": true,
+      "intent": "其他"
+    }
+  },
+  {
+    "id": 99,
+    "category": "Few-Shot覆盖-DIY教程",
+    "input": "我想自己加玻璃水，但是找不到盖子在哪，能教我一下吗？",
+    "expected": {
+      "related": true,
+      "intent": "车辆使用与技术指导"
+    }
+  },
+  {
+    "id": 100,
+    "category": "Few-Shot覆盖-投诉",
+    "input": "我刚提的新车，才开了一周，今天发现中控屏老是死机，太影响心情了！订单号XYZ12345。",
+    "expected": {
+      "related": true,
+      "intent": "投诉与维权"
+    }
+  }
+]

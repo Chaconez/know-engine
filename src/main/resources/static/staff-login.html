@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>员工登录 - KnowEngine 知识引擎</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .login-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 400px;
+            padding: 40px;
+        }
+        .login-title {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .login-title h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .login-title p {
+            font-size: 14px;
+            color: #999;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+        .login-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .error-msg {
+            background: #fff0f0;
+            border: 1px solid #ffcccc;
+            color: #dc3545;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .test-tip {
+            margin-top: 20px;
+            padding: 12px;
+            background: #f8f9fa;
+            border: 1px dashed #d0d0d0;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #888;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-title">
+            <h1>📄 员工登录</h1>
+            <p>请使用工号和密码登录，进入文档管理</p>
+        </div>
+
+        <div class="error-msg" id="errorMsg"></div>
+
+        <form id="loginForm" onsubmit="return false;">
+            <div class="form-group">
+                <label for="empId">工号</label>
+                <input type="text" id="empId" name="empId" placeholder="请输入工号" autocomplete="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" name="password" placeholder="请输入密码" autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="login-btn" id="loginBtn">登 录</button>
+        </form>
+
+        <div class="test-tip">
+            员工账号：请联系管理员获取工号
+        </div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const loginBtn = document.getElementById('loginBtn');
+        const errorMsgEl = document.getElementById('errorMsg');
+
+        // 页面加载时检查是否已用员工账号登录，已登录则直接跳转到文档管理页
+        (async function checkLogin() {
+            try {
+                const resp = await fetch('/auth/isLogin');
+                const data = await resp.json();
+                if (data.code !== 200 || data.data !== true) {
+                    return;
+                }
+                const userResp = await fetch('/auth/userInfo');
+                const userData = await userResp.json();
+                if (userData.code === 200 && userData.data && userData.data.userType === 'staff') {
+                    window.location.href = '/document.html';
+                }
+            } catch (e) {
+                // 忽略
+            }
+        })();
+
+        loginForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const empId = document.getElementById('empId').value.trim();
+            const password = document.getElementById('password').value.trim();
+            if (!empId || !password) {
+                showError('请输入工号和密码');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = '登录中...';
+            errorMsgEl.style.display = 'none';
+
+            try {
+                const resp = await fetch('/auth/staffLogin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ empId: empId, password: password })
+                });
+                const data = await resp.json();
+                if (data.code === 200) {
+                    // 登录成功，跳转到文档管理页
+                    window.location.href = '/document.html';
+                } else {
+                    showError(data.msg || '登录失败');
+                }
+            } catch (err) {
+                showError('网络错误，请稍后重试');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = '登 录';
+            }
+        });
+
+        function showError(msg) {
+            errorMsgEl.textContent = msg;
+            errorMsgEl.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

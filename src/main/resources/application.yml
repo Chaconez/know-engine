@@ -1,0 +1,170 @@
+server:
+  port: 8009
+
+spring:
+  application:
+    name: KnowEngine
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 100MB
+      max-request-size: 100MB
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/know_engine?rewriteBatchedStatements=true
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # druid:
+    initial-size: 5
+    min-idle: 5
+    max-active: 20
+    max-wait: 60000
+    time-between-eviction-runs-millis: 60000
+    min-evictable-idle-time-millis: 300000
+    validation-query: SELECT 1
+    test-while-idle: true
+    test-on-borrow: false
+    test-on-return: false
+    pool-prepared-statements: true
+    max-pool-prepared-statement-per-connection-size: 20
+    filters: stat,wall
+    connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+    stat-view-servlet:
+      enabled: true
+      url-pattern: /druid/*
+      login-username: ${DRUID_USERNAME:admin}
+      login-password: ${DRUID_PASSWORD:admin}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      password: ${REDIS_PASSWORD:}
+      ssl:
+        enabled: false
+  redis:
+    redisson:
+      config: |
+        singleServerConfig:
+          idleConnectionTimeout: 10000
+          connectTimeout: 10000
+          timeout: 3000
+          retryAttempts: 3
+          retryInterval: 1500
+          subscriptionsPerConnection: 5
+          clientName: null
+          password: ${REDIS_PASSWORD:}
+          address: "redis://${REDIS_HOST:localhost}:6379"
+          subscriptionConnectionMinimumIdleSize: 1
+          subscriptionConnectionPoolSize: 50
+          connectionMinimumIdleSize: 24
+          connectionPoolSize: 64
+          database: 0
+          dnsMonitoringInterval: 5000
+        threads: 16
+        nettyThreads: 32
+        codec: !<org.redisson.codec.JsonJacksonCodec> {}
+        transportMode: "NIO"
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  mapper-locations: classpath*:/mapper/**/*.xml
+
+langchain4j:
+  open-ai:
+    chat-model:
+      # LLM API Key 通过环境变量 DASHSCOPE_API_KEY 注入（见 README 环境变量配置说明）
+      api-key: ${DASHSCOPE_API_KEY:}
+      model-name: ${OLLAMA_CHAT_MODEL:qwen3.8:27b-mlx}
+      # 默认使用本地 Ollama（OpenAI 兼容端点）；切回云端：--spring.profiles.active=cloud
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}/v1
+      log-requests: true
+      log-responses: true
+    streaming-chat-model:
+      api-key: ${DASHSCOPE_API_KEY:}
+      model-name: ${OLLAMA_CHAT_MODEL:qwen3.8:27b-mlx}
+      # 默认使用本地 Ollama（OpenAI 兼容端点）；切回云端：--spring.profiles.active=cloud
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}/v1
+      log-requests: true
+      log-responses: true
+  community:
+    neo4j:
+      await-index-timeout: 300
+      auth:
+        uri: ${NEO4J_URI:bolt://localhost:7687}
+        user: ${NEO4J_USERNAME:neo4j}
+        password: ${NEO4J_PASSWORD:password}
+
+elasticsearch:
+  host: ${ES_HOST:http://localhost:9200}
+  # embedding 走本地 Ollama 的 OpenAI 兼容端点（bge-m3，1024 维）
+  # 回滚云端：base-url 改回 https://dashscope.aliyuncs.com/compatible-mode/v1、
+  #           model-name 改回 text-embedding-v4、dimensions 改回 1536、api-key 改回 ${DASHSCOPE_API_KEY}
+  # 注意：切换 embedding 模型后新旧向量维度不一致，必须重建索引并重新向量化
+  base-url: ${OLLAMA_BASE_URL:http://localhost:11434}/v1
+  model-name: ${OLLAMA_EMBEDDING_MODEL:bge-m3}
+  api-key: ${OLLAMA_API_KEY:ollama}
+  dimensions: 1024
+
+minio:
+  url: ${MINIO_URL:http://localhost:9000}
+  accessKey: ${MINIO_ACCESS_KEY:minioadmin}
+  secretKey: ${MINIO_SECRET_KEY:minioadmin}
+  bucketName: know-engine
+  endpoint: ${MINIO_URL:http://localhost:9000}
+
+neo4j:
+  uri: ${NEO4J_URI:bolt://localhost:7687}
+  username: ${NEO4J_USERNAME:neo4j}
+  password: ${NEO4J_PASSWORD:password}
+
+# 文件解析服务配置
+file:
+  parse:
+    api:
+      url: ${FILE_PARSE_API_URL:http://localhost:8000} # 文档解析接口地址
+
+# XXL-Job 配置
+xxl:
+  job:
+    admin:
+      addresses: ${XXL_JOB_ADMIN:http://localhost:8081/xxl-job-admin} # xxl-job-admin 地址
+    accessToken: default_token
+    executor:
+      appname: know-engine-executor # 执行器名称
+
+dingtalk:
+  enabled: ${DINGTALK_ENABLED:false}
+  appKey: ${DINGTALK_APP_KEY:}
+  appSecret: ${DINGTALK_APP_SECRET:}
+  robotCode: ${DINGTALK_ROBOT_CODE:}
+
+# Sa-Token 配置
+sa-token:
+  # token 名称（同时也是 Cookie 名称、Header 名称）
+  token-name: satoken
+  # token 有效期（秒），默认 30 天，-1 代表永久有效
+  timeout: 2592000
+  # token 最低活跃频率（秒），如果 token 超过这个时间没有访问系统就会被冻结，默认-1 代表不限制
+  active-timeout: -1
+  # 是否允许同一账号并发登录（为 true 时允许一起登录，为 false 时新登录会挤下旧登录）
+  is-concurrent: true
+  # 在多人登录同一账号时，是否共用一个 token（为 true 时所有登录共用一个 token，为 false 时每次登录新建一个 token）
+  is-share: true
+  # token 风格（uuid）
+  token-style: uuid
+  # 是否输出操作日志
+  is-log: false
+  # 是否从 cookie 中读取 token
+  is-read-cookie: true
+  # 是否从 header 中读取 token
+  is-read-header: true
+# 按 sql/tables.sql 初始化缓存及评价表 并配置审核员及 XXL-Job 后启用
+qa-cache:
+  enabled: ${QA_CACHE_ENABLED:false}
+  index-name: know-engine-qa-cache-v1
+  min-score: 0.95
+  min-frequency: 3
+  reviewer-ids: ${QA_CACHE_REVIEWER_IDS:}
