@@ -131,6 +131,17 @@ public class ChatApplicationService {
     @Value("${langchain4j.open-ai.chat-model.base-url}")
     private String chatModelBaseUrl;
 
+    /**
+     * 会话标题生成使用的模型名。
+     * <p>
+     * 原实现硬编码为 {@code qwen3.5-flash}（DashScope 云端模型），在本地 Ollama 端点下会
+     * 直接 404（{@code model 'qwen3.5-flash' not found}），标题始终停留在临时标题。
+     * 这里改为可配置：默认跟随主对话模型，需要更快时可单独指定轻量模型
+     * （如 {@code know-engine.chat.title-model=qwen2.5:7b}）。
+     */
+    @Value("${know-engine.chat.title-model:${langchain4j.open-ai.chat-model.model-name}}")
+    private String titleModelName;
+
     @Value("classpath:prompts/text-to-sql-prompt.txt")
     private Resource textToSqlPrompt;
 
@@ -187,7 +198,7 @@ public class ChatApplicationService {
                 try {
                     OpenAiChatModel titleChatModel = OpenAiChatModel.builder()
                             .apiKey(chatModelApiKey)
-                            .modelName("qwen3.5-flash")
+                            .modelName(titleModelName)
                             .temperature(0.7)
                             .baseUrl(chatModelBaseUrl)
                             .customParameters(Map.of("enable_thinking", false))

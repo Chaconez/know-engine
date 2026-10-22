@@ -287,8 +287,8 @@ CREATE TABLE IF NOT EXISTS `user_info` (
     UNIQUE KEY `uk_phone` (`phone`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci comment='客户信息表';
 
--- 初始化一个测试客户账号（手机号: 13800138000，密码: 123456）
-INSERT INTO `user_info` (`phone`, `password`, `name`, `nickname`) VALUES ('13800138000', '123456', '测试客户', '小测') ON DUPLICATE KEY UPDATE `password` = '123456';
+-- 初始化一个测试客户账号（手机号: 18650567815，密码: 123456）
+INSERT INTO `user_info` (`phone`, `password`, `name`, `nickname`) VALUES ('18650567815', '123456', '测试客户', '小测') ON DUPLICATE KEY UPDATE `password` = '123456';
 
 -- 已有库执行 ALTER TABLE 添加 password 列（新建库无需执行）
 ALTER TABLE `staff_info` ADD COLUMN `password` VARCHAR(128) DEFAULT NULL comment '登录密码' AFTER `name`;

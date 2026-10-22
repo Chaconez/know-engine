@@ -11,7 +11,9 @@ spring:
       max-request-size: 100MB
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
-    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/know_engine?rewriteBatchedStatements=true
+    # characterEncoding 必须显式指定：缺省时 MySQL 驱动会把中文按 latin1 写入，
+    # 「测试客户」会被存成双重编码的 æµ‹è¯•å®¢æˆ·。
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/know_engine?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true&useSSL=false
     username: ${MYSQL_USERNAME:root}
     password: ${MYSQL_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver

@@ -1,0 +1,68 @@
+# KnowEngine NAS 部署覆盖配置
+#
+# 用途：NAS（<NAS_IP>）上的 Docker 端口映射只监听 loopback，宿主机用自身 IP
+#      访问会被防火墙丢弃（实测 3306/6379/9200/9000/7687/8081 全部 loopback 通、
+#      <NAS_IP> 不通）。因此所有本机中间件地址统一改为 127.0.0.1。
+#
+# 加载方式：容器启动参数 --spring.config.additional-location=file:/app/config/
+#          该位置优先级高于 jar 内 classpath 的 application.yml。
+# 未在此文件出现的配置项沿用 jar 内默认值（Ollama 走 <OLLAMA_HOST>，属外部主机，保持不变）。
+
+spring:
+  datasource:
+    # characterEncoding 必须显式指定：jar 内默认 URL 未带该参数，实测会把中文按 latin1
+    # 读写，导致「测试客户」写成双重编码的 æµ‹è¯•å®¢æˆ·（历史数据已按此修复）。
+    url: jdbc:mysql://127.0.0.1:3306/know_engine?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true&useSSL=false
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+  redis:
+    redisson:
+      config: |
+        singleServerConfig:
+          idleConnectionTimeout: 10000
+          connectTimeout: 10000
+          timeout: 3000
+          retryAttempts: 3
+          retryInterval: 1500
+          subscriptionsPerConnection: 5
+          clientName: null
+          address: "redis://127.0.0.1:6379"
+          subscriptionConnectionMinimumIdleSize: 1
+          subscriptionConnectionPoolSize: 50
+          connectionMinimumIdleSize: 24
+          connectionPoolSize: 64
+          database: 0
+          dnsMonitoringInterval: 5000
+        threads: 16
+        nettyThreads: 32
+        codec: !<org.redisson.codec.JsonJacksonCodec> {}
+        transportMode: "NIO"
+
+elasticsearch:
+  host: http://127.0.0.1:9200
+
+minio:
+  url: http://127.0.0.1:9000
+  endpoint: http://127.0.0.1:9000
+
+neo4j:
+  uri: bolt://127.0.0.1:7687
+
+langchain4j:
+  community:
+    neo4j:
+      auth:
+        uri: bolt://127.0.0.1:7687
+
+xxl:
+  job:
+    admin:
+      addresses: http://127.0.0.1:8081/xxl-job-admin
+
+# 会话标题生成单独用轻量模型：主对话模型 qwen3.8:27b-mlx 有 18GB，
+# 与 bge-m3 交替加载会让每次调用都等模型重新载入，标题这种小任务不划算。
+know-engine:
+  chat:
+    title-model: ${OLLAMA_TITLE_MODEL:qwen2.5:7b}

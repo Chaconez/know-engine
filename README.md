@@ -2,6 +2,13 @@
 
 > 基于 RAG 架构的企业知识管理与智能问答引擎，实现从文档接入、智能切片、向量化存储到多源检索、意图路由、流式对话的全链路闭环。
 
+**作者：章文杰 · 技术演示项目（面试作品集）**
+
+![Java](https://img.shields.io/badge/Java-21-orange)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.6-brightgreen)
+![LangChain4j](https://img.shields.io/badge/LangChain4j-1.11.0-blue)
+![License](https://img.shields.io/badge/License-MIT-lightgrey)
+
 ---
 
 ## 架构总览
@@ -278,12 +285,12 @@ Markdown 文档中的表格和图片在被 `chunkSize` 二次切割时面临语�
 - **兄弟分段自动补全**：通过 `brotherChunkId` + `brotherChunkIndex` + `brotherChunkTotal` 元数据，检索命中任一子分片时自动补全同级所有兄弟分段，拼出完整内容
 - **代码块保护**：Markdown 切片器识别 ``` 代码围栏，将整个代码块作为一个不可分割的单元处理，避免代码被截断
 
-### 🔥 虚拟线程 + Flash 模型 — 异步标题生成零延迟
+### 🔥 虚拟线程 + 轻量模型 — 异步标题生成零延迟
 
-新会话首条消息发出后，系统通过 `Thread.ofVirtual().name("title-summary-" + conversationId).start(...)` 启动 Java 21 虚拟线程，异步调用 qwen3.5-flash 轻量模型生成对话标题并回写数据库。关键设计：
+新会话首条消息发出后，系统通过 `Thread.ofVirtual().name("title-summary-" + conversationId).start(...)` 启动 Java 21 虚拟线程，异步调用轻量模型生成对话标题并回写数据库。关键设计：
 - **零阻塞**：虚拟线程不占用平台线程，不阻塞 SSE 流式响应的首 Token 输出
-- **Flash 模型选型**：使用 qwen3.5-flash 而非 qwen-max，标题生成任务对推理能力要求低，Flash 模型响应更快、成本更低
-- **关闭思考模式**：通过 `customParameters(Map.of("enable_thinking", false))` 关闭 qwen3.5-flash 的 CoT 思考过程，进一步降低延迟
+- **模型可配置**：`know-engine.chat.title-model` 单独指定标题生成模型（默认跟随主对话模型），本地部署时指向 `qwen2.5:7b` 之类的轻量模型，避免为了取标题把大模型重新载入显存
+- **关闭思考模式**：通过 `customParameters(Map.of("enable_thinking", false))` 关闭 CoT 思考过程，进一步降低延迟
 - **优雅降级**：标题生成失败时保留临时标题，不影响对话功能
 
 ### 🔥 意图识别 — LLM Structured Output 约束
@@ -438,13 +445,25 @@ know-engine/
 1. 配置环境变量（或直接修改 `application.yml`）
 2. 执行 `src/main/resources/sql/tables.sql` 初始化数据库表
 
-### 本地 Reranker 模型（可选）
+### 本地 Reranker 模型（可选，但推荐）
 
-仓库不含模型文件（单文件超 GitHub 100MB 限制）。如需启用本地 ONNX Reranker，从 HuggingFace 下载 [BAAI/bge-reranker-v2-m3](https://huggingface.co/BAAI/bge-reranker-v2-m3) 的 ONNX 量化版本，重命名为 `model_quantized.onnx`（连同 `tokenizer.json`）放入：
+仓库不含模型文件（`model_quantized.onnx` 约 544MB，超出 GitHub 单文件 100MB 限制）。一条命令自动下载到正确位置：
+
+```bash
+./scripts/download-reranker.sh
+# 默认走 hf-mirror.com 镜像；如需官方源：
+# HF_ENDPOINT=https://huggingface.co ./scripts/download-reranker.sh
+```
+
+脚本会拉取 [onnx-community/bge-reranker-v2-m3-ONNX](https://huggingface.co/onnx-community/bge-reranker-v2-m3-ONNX) 的量化模型与 tokenizer，并校验完整性，落地到：
 
 ```
 src/main/resources/model/bge-reranker-model/
+├── model_quantized.onnx
+└── tokenizer.json
 ```
+
+未下载时服务仍可启动，检索退化为不加 rerank 的融合排序。
 
 ### 构建 & 运行
 
@@ -452,6 +471,16 @@ src/main/resources/model/bge-reranker-model/
 mvn clean package -DskipTests
 java -jar target/know-engine-1.0.0.jar
 ```
+
+启动后访问 `http://localhost:8009`。
+
+### 演示账号
+
+| 入口 | 地址 | 账号 | 密码 |
+|------|------|------|------|
+| 客户端问答 | `http://localhost:8009/login.html` | 手机号 `18650567815` | `123456` |
+| 员工后台 | `http://localhost:8009/staff-login.html` | 工号 `TEST001` | `123456` |
+| Druid 监控 | `http://localhost:8009/druid/` | `admin` | `admin` |
 
 ### 接口速览
 
@@ -578,3 +607,7 @@ java -jar target/know-engine-1.0.0.jar
 ### 缓存代码目录
 
 `QaCacheService` 统一承载历史问答提取、缓存查询、发布和准出调度，提取步骤保留为内部方法。缓存模块按现有项目分层放置：`controller` 放审核接口，`service` 放缓存查询、提取及准出逻辑，`service/impl` 放 MyBatis-Plus 实现，`entity` 和 `mapper` 放持久化对象与查询，`config`、`job`、`util` 分别放配置、调度和工具。模型提示词位于 `resources/prompts/qa-cache-*-prompt.txt`。统一评价操作收在现有 `ChatMessageService` 和 `ChatMessageMapper` 中。
+
+---
+
+© 2026 章文杰 · 技术演示项目

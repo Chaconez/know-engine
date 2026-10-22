@@ -15,6 +15,7 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             padding: 20px;
@@ -103,6 +104,13 @@
             color: #888;
             line-height: 1.6;
         }
+        .login-footer {
+            margin-top: 18px;
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.75);
+            letter-spacing: 0.02em;
+        }
     </style>
 </head>
 <body>
@@ -127,9 +135,11 @@
         </form>
 
         <div class="test-tip">
-            测试账号：手机号 13800138000，密码 123456
+            测试账号：手机号 18650567815，密码 123456
         </div>
     </div>
+
+    <div class="login-footer">© 2026 章文杰 · 技术演示项目</div>
 
     <script>
         const loginForm = document.getElementById('loginForm');

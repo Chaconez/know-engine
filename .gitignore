@@ -14,7 +14,9 @@ target/
 Thumbs.db
 
 # Local ONNX model files (too large for GitHub, > 100MB single-file limit)
+# 用 scripts/download-reranker.sh 获取，不要提交进仓库
 src/main/resources/model/bge-reranker-model/*.onnx
+src/main/resources/model/bge-reranker-model/tokenizer.json
 
 # Logs
 *.log
