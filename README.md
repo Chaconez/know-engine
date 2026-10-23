@@ -2,7 +2,7 @@
 
 > 基于 RAG 架构的企业知识管理与智能问答引擎，实现从文档接入、智能切片、向量化存储到多源检索、意图路由、流式对话的全链路闭环。
 
-**作者：章文杰 · 技术演示项目（面试作品集）**
+**作者：章文杰 · 技术演示项目**
 
 ![Java](https://img.shields.io/badge/Java-21-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.6-brightgreen)
