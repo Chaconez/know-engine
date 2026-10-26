@@ -26,3 +26,6 @@ logs/
 # Local env files
 .env
 .env.local
+
+# WorkBuddy local workspace data (session memory, not project code)
+.workbuddy/
