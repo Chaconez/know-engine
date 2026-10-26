@@ -147,8 +147,17 @@ public class KnowEngineElasticsearchContentRetriever extends AbstractElasticsear
             searchContents = mapResultsToContentList(this.search(request));
         }
 
+        log.info("[检索] 模式={}, 命中={}, query={}",
+                configuration.getClass().getSimpleName(), searchContents.size(), query.text());
+        if (log.isDebugEnabled()) {
+            searchContents.forEach(c -> log.debug("[检索命中] score={}, text={}",
+                    c.metadata().get(ContentMetadata.SCORE),
+                    c.textSegment().text().substring(0, Math.min(50, c.textSegment().text().length()))));
+        }
+
         List<Content> finalContents = proccessParentAndBrotherContent(searchContents);
 
+        log.info("[检索] 上下文扩展后剩余={}", finalContents.size());
         return finalContents;
     }
 
@@ -205,8 +214,9 @@ public class KnowEngineElasticsearchContentRetriever extends AbstractElasticsear
                         finalContents.remove(content);
                         finalContents.addAll(parentDocs);
                     } else {
-                        log.warn("parentChunk not found in Redis, chunkId: {}", parentChunkId);
-                        finalContents.remove(content);
+                        // 父分段取不到时保留子分段本身：子分段是已经命中的有效内容，
+                        // 仅因上下文扩展失败就丢弃会导致「明明有命中却回答没有相关资料」
+                        log.warn("父分段未取到，保留子分段原文。chunkId={}, parentChunkId={}", content.textSegment().metadata().getString("chunkId"), parentChunkId);
                     }
                 }
             }
@@ -251,7 +261,7 @@ public class KnowEngineElasticsearchContentRetriever extends AbstractElasticsear
                                     : q.bool(b -> b
                                     .must(m -> m.match(mm -> mm.field("text").query(query.text())))
                                     .filter(f -> f.terms(t -> t
-                                            .field("metadata.accessibleBy")
+                                            .field("metadata.accessibleBy.keyword")
                                             .terms(tv -> tv.value(accessibleValues.stream()
                                                     .map(co.elastic.clients.elasticsearch._types.FieldValue::of)
                                                     .toList())))))),

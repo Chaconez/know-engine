@@ -61,6 +61,15 @@ public class ProgressAwareContentAggregator implements ContentAggregator {
 
         List<Content> results = delegate.aggregate(queryToContents);
 
+        // 观测点：重排序会按 minScore 过滤，这里记录候选数与最终保留数，
+        // 便于区分「检索不到内容」与「命中后被阈值过滤掉」两类问题
+        int candidateCount = queryToContents.values().stream()
+                .flatMap(Collection::stream)
+                .mapToInt(List::size)
+                .sum();
+        log.info("[重排序] 候选={}, 保留={}, 保留明细={}", candidateCount, results.size(),
+                results.stream().map(c -> c.metadata().get("RERANKED_SCORE")).toList());
+
         try {
             // 文档维度的RAG引用信息，用于前端展示
             List<ChatMessage.RagReference> ragReferencesDocs = results.stream()

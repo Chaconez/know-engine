@@ -81,20 +81,26 @@ mybatis-plus:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   mapper-locations: classpath*:/mapper/**/*.xml
 
+# ================================================================
+# 全部模型走本地 Ollama（OpenAI 兼容端点），不依赖任何云端大模型服务
+#
+# 需要提前 pull 的模型：
+#   ollama pull qwen3.8:27b-mlx   # 主对话模型（OLLAMA_CHAT_MODEL）
+#   ollama pull bge-m3            # embedding（OLLAMA_EMBEDDING_MODEL）
+#   ollama pull qwen2.5vl:7b      # 文档图片描述（OLLAMA_VISION_MODEL）
+# ================================================================
 langchain4j:
   open-ai:
     chat-model:
-      # LLM API Key 通过环境变量 DASHSCOPE_API_KEY 注入（见 README 环境变量配置说明）
-      api-key: ${DASHSCOPE_API_KEY:}
+      # Ollama 不校验 API Key，填任意非空字符串即可（为空时 langchain4j 会拒绝构建模型）
+      api-key: ${OLLAMA_API_KEY:ollama}
       model-name: ${OLLAMA_CHAT_MODEL:qwen3.8:27b-mlx}
-      # 默认使用本地 Ollama（OpenAI 兼容端点）；切回云端：--spring.profiles.active=cloud
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}/v1
       log-requests: true
       log-responses: true
     streaming-chat-model:
-      api-key: ${DASHSCOPE_API_KEY:}
+      api-key: ${OLLAMA_API_KEY:ollama}
       model-name: ${OLLAMA_CHAT_MODEL:qwen3.8:27b-mlx}
-      # 默认使用本地 Ollama（OpenAI 兼容端点）；切回云端：--spring.profiles.active=cloud
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}/v1
       log-requests: true
       log-responses: true
@@ -106,11 +112,24 @@ langchain4j:
         user: ${NEO4J_USERNAME:neo4j}
         password: ${NEO4J_PASSWORD:password}
 
+# 本地模型按用途拆分（缺省均跟随 langchain4j.open-ai.chat-model.model-name）
+know-engine:
+  # RAG 最终回答流式生成
+  rag:
+    chat-model: ${OLLAMA_CHAT_MODEL:qwen3.8:27b-mlx}
+    # 重排序最低分。BGE-Reranker-v2-m3 输出为 logits（非 0~1 概率），
+    # 设为正数会误伤正确命中的分段，默认 0 表示只剔除负相关，条数由 maxResults 控制
+    reranker-min-score: ${RERANKER_MIN_SCORE:0.0}
+  # 会话标题生成（轻任务）
+  title:
+    chat-model: ${OLLAMA_CHAT_MODEL:qwen3.8:27b-mlx}
+  # 文档图片描述，需要多模态视觉模型：ollama pull qwen2.5vl:7b
+  vision:
+    chat-model: ${OLLAMA_VISION_MODEL:qwen2.5vl:7b}
+
 elasticsearch:
   host: ${ES_HOST:http://localhost:9200}
   # embedding 走本地 Ollama 的 OpenAI 兼容端点（bge-m3，1024 维）
-  # 回滚云端：base-url 改回 https://dashscope.aliyuncs.com/compatible-mode/v1、
-  #           model-name 改回 text-embedding-v4、dimensions 改回 1536、api-key 改回 ${DASHSCOPE_API_KEY}
   # 注意：切换 embedding 模型后新旧向量维度不一致，必须重建索引并重新向量化
   base-url: ${OLLAMA_BASE_URL:http://localhost:11434}/v1
   model-name: ${OLLAMA_EMBEDDING_MODEL:bge-m3}

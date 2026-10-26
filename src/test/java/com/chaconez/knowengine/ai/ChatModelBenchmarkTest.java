@@ -14,9 +14,9 @@ import java.util.Map;
  * 不同LLM模型的ChatModel调用结果和耗时基准测试
  * <p>
  * 本测试直接构造ChatModel实例（不依赖Spring上下文），
- * 分别调用不同的LLM模型，比较返回结果和响应时间。
+ * 分别调用本地 Ollama 上不同的LLM模型，比较返回结果和响应时间。
  * <p>
- * 注意：本测试会实际调用LLM API产生费用，默认@Disabled，需要手动运行。
+ * 注意：本测试会实际调用本地 Ollama（不产生费用），默认@Disabled，需要手动运行。
  *
  * @author Chaconez
  */
@@ -26,27 +26,24 @@ public class ChatModelBenchmarkTest {
     // ========== 配置区域（按需修改） ==========
 
     /**
-     * DashScope（通义千问）API地址
+     * 本地 Ollama 的 OpenAI 兼容端点
      */
-    private static final String BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
+    private static final String BASE_URL = System.getenv("OLLAMA_BASE_URL") == null
+            ? "http://localhost:11434/v1" : System.getenv("OLLAMA_BASE_URL") + "/v1";
 
     /**
-     * API Key：通过环境变量 DASHSCOPE_API_KEY 注入，避免硬编码泄漏
+     * API Key：Ollama 不校验 Key，填任意非空值即可
      */
-    private static final String API_KEY = System.getenv("DASHSCOPE_API_KEY") == null
-            ? "sk-xxx" : System.getenv("DASHSCOPE_API_KEY");
+    private static final String API_KEY = "ollama";
 
     /**
-     * 要测试的模型列表
+     * 要测试的模型列表（均需先 ollama pull 到本地）
      */
     private static final List<String> MODEL_NAMES = List.of(
-            "qwen-max-latest",
-            "qwen3.6-max-preview",
-            "qwen3.6-flash",
-            "qwen3-30b-a3b-instruct-2507",
-            "qwen3.5-27b",
-            "deepseek-r1-distill-qwen-7b",
-            "deepseek-r1-distill-qwen-32b"
+            "qwen3.8:27b-mlx",
+            "qwen3:8b",
+            "qwen2.5:14b",
+            "qwen2.5:7b"
     );
 
     /**

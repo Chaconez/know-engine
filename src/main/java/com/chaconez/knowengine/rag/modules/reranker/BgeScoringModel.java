@@ -4,7 +4,6 @@ package com.chaconez.knowengine.rag.modules.reranker;
 import dev.langchain4j.model.scoring.onnx.OnnxScoringModel;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -48,34 +47,62 @@ public class BgeScoringModel {
     private static final String CLASSPATH_TOKENIZER = "model/bge-reranker-model/tokenizer.json";
 
     /**
+     * 外置模型路径的环境变量名
+     * <p>
+     * 用于容器化部署：模型文件（~570MB）不打入 jar，而是通过挂载卷提供，
+     * 由环境变量指定绝对路径。未设置时回退到 classpath，仍未找到则降级。
+     */
+    private static final String ENV_MODEL_PATH = "RERANKER_MODEL_PATH";
+    private static final String ENV_TOKENIZER_PATH = "RERANKER_TOKENIZER_PATH";
+
+    /**
      * 单例实例，使用 volatile 保证多线程可见性
      */
     private static volatile OnnxScoringModel instance;
 
     /**
-     * 外部模型文件路径（可选）。
-     * <p>
-     * 模型 544MB，打进 jar 会让包体积翻倍且无法复用；部署时更推荐把模型放在宿主机目录挂载进容器，
-     * 通过 {@code know-engine.reranker.model-path} 指过来。留空则回退到 classpath 内的
-     * {@link #CLASSPATH_MODEL}。
+     * 模型是否已尝试加载并失败，用于避免每次问答都重试加载数百 MB 的模型
      */
-    @Value("${know-engine.reranker.model-path:}")
-    private String externalModelPath;
+    private static volatile boolean loadFailed = false;
 
     /**
-     * 外部 tokenizer 文件路径（可选），留空则回退到 classpath 内的 {@link #CLASSPATH_TOKENIZER}。
+     * 实际解析到的模型路径与来源，仅用于健康检查与问题排查
      */
-    @Value("${know-engine.reranker.tokenizer-path:}")
-    private String externalTokenizerPath;
+    private static volatile String resolvedModelPath;
+    private static volatile String modelSource = "none";
+
+    /**
+     * @return 实际使用的模型文件路径；未加载时为 null
+     */
+    public static String getResolvedModelPath() {
+        return resolvedModelPath;
+    }
+
+    /**
+     * @return 模型来源：env:RERANKER_MODEL_PATH / classpath / none
+     */
+    public static String getModelSource() {
+        return modelSource;
+    }
 
     /**
      * Spring 容器启动时预加载模型，避免首次问答时触发模型加载导致延迟
+     * <p>
+     * 模型文件为可选项（仓库不含模型二进制，超 GitHub 单文件 100MB 限制），
+     * 缺失时仅记录告警并降级，不阻断容器启动。
      */
     @PostConstruct
     public void init() {
-        if (instance == null) {
-            loadModel(externalModelPath, externalTokenizerPath);
-        }
+        tryLoadModel();
+    }
+
+    /**
+     * 本地 Reranker 模型是否可用（即模型文件已放置且加载成功）
+     *
+     * @return true 表示可启用精排，false 表示需降级为 RRF 融合
+     */
+    public static boolean isAvailable() {
+        return instance != null;
     }
 
     /**
@@ -83,32 +110,47 @@ public class BgeScoringModel {
      * <p>
      * 正常情况下模型已在 {@link #init()} 中预加载完成，直接返回实例。
      * 若在 Spring 容器初始化完成前被调用（如单元测试），则降级为懒加载。
+     * 模型文件缺失时返回 {@code null}，调用方需先用 {@link #isAvailable()} 判断。
      *
-     * @return OnnxScoringModel 实例
+     * @return OnnxScoringModel 实例，模型不可用时为 null
      */
     public static OnnxScoringModel getInstance() {
         if (instance == null) {
-            synchronized (BgeScoringModel.class) {
-                if (instance == null) {
-                    loadModel(null, null);
-                }
-            }
+            tryLoadModel();
         }
         return instance;
     }
 
     /**
-     * 加载 ONNX 模型与 tokenizer，初始化 OnnxScoringModel 实例
-     *
-     * @param externalModel     外部模型文件路径，为空则使用 classpath 资源
-     * @param externalTokenizer 外部 tokenizer 文件路径，为空则使用 classpath 资源
+     * 尝试加载模型，失败时标记 loadFailed 并记录告警，不向外抛出异常
      */
-    private static synchronized void loadModel(String externalModel, String externalTokenizer) {
+    private static synchronized void tryLoadModel() {
+        if (instance != null || loadFailed) {
+            return;
+        }
+        try {
+            loadModel();
+        } catch (Exception e) {
+            loadFailed = true;
+            log.warn("BGE-RERANKER 模型未加载，Reranking 将降级为 RRF 融合，不影响其余功能。" +
+                            "如需启用本地精排，请将 model_quantized.onnx 与 tokenizer.json 放入 " +
+                            "src/main/resources/model/bge-reranker-model/。原因：{}",
+                    e.getMessage());
+        }
+    }
+
+    /**
+     * 加载 ONNX 模型与 tokenizer，初始化 OnnxScoringModel 实例
+     */
+    private static synchronized void loadModel() {
         if (instance != null) {
             return;
         }
-        String modelPath = resolvePath(externalModel, CLASSPATH_MODEL);
-        String tokenizerPath = resolvePath(externalTokenizer, CLASSPATH_TOKENIZER);
+        String modelPath = resolveModelPath(CLASSPATH_MODEL, ENV_MODEL_PATH);
+        String tokenizerPath = resolveModelPath(CLASSPATH_TOKENIZER, ENV_TOKENIZER_PATH);
+        resolvedModelPath = modelPath;
+        String envModel = System.getenv(ENV_MODEL_PATH);
+        modelSource = (envModel != null && !envModel.isBlank()) ? "env:" + ENV_MODEL_PATH : "classpath";
 
         log.info("正在初始化 BGE-RERANKER 评分模型...");
         log.info("模型路径: {}", modelPath);
@@ -120,19 +162,25 @@ public class BgeScoringModel {
     }
 
     /**
-     * 优先使用外部文件，缺失时回退到 classpath 资源
+     * 解析模型文件路径，优先级：外置环境变量 > classpath 资源
+     * <p>
+     * 容器化部署时通过 {@code RERANKER_MODEL_PATH} / {@code RERANKER_TOKENIZER_PATH}
+     * 指定挂载卷中的绝对路径，避免把数百 MB 的模型打进 jar；
+     * 未设置或指向的文件不存在时，回退到 classpath 资源。
      *
-     * @param external           外部文件路径
-     * @param classpathResource  classpath 下的资源名
-     * @return 可被 ONNX Runtime 直接读取的文件绝对路径
+     * @param classpathResource classpath 下的资源名称（兜底）
+     * @param envVar            外置路径的环境变量名
+     * @return 模型文件的绝对路径
      */
-    private static String resolvePath(String external, String classpathResource) {
+    private static String resolveModelPath(String classpathResource, String envVar) {
+        String external = System.getenv(envVar);
         if (external != null && !external.isBlank()) {
-            File file = new File(external);
-            if (file.isFile()) {
-                return file.getAbsolutePath();
+            File externalFile = new File(external.trim());
+            if (externalFile.isFile()) {
+                log.info("使用外置模型文件（来自环境变量 {}）: {}", envVar, externalFile.getAbsolutePath());
+                return externalFile.getAbsolutePath();
             }
-            log.warn("配置的外部文件不存在，回退 classpath 资源: {} -> {}", external, classpathResource);
+            log.warn("环境变量 {} 指向的文件不存在，回退到 classpath: {}", envVar, external.trim());
         }
         return resolveClasspathToFilePath(classpathResource);
     }

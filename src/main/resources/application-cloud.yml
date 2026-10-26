@@ -1,18 +1,21 @@
 # ================================================================
-# 云端模型配置（DashScope 百炼 · OpenAI 兼容端点）
+# 【已废弃】云端模型配置（DashScope 百炼 · OpenAI 兼容端点）
 #
-# 启用方式：--spring.profiles.active=cloud
-#   IDE    : VM options 加 -Dspring.profiles.active=cloud
-#   命令行 : java -jar know-engine.jar --spring.profiles.active=cloud
+# 本项目已全面切换为本地 Ollama 模型，默认不启用任何云端大模型。
+# 本文件仅作历史回滚参考保留，请勿在日常开发/部署中激活。
 #
-# 默认（不激活 profile）走本地 Ollama：http://localhost:11434/v1
-# embedding（elasticsearch.base-url + text-embedding-v4）不受影响，始终走云端
+# 启用方式（不推荐）：--spring.profiles.active=cloud
+#   需要同时设置 DASHSCOPE_API_KEY 环境变量。
+#
+# 如需彻底移除本地化以外的选项，直接删除本文件即可。
 # ================================================================
 langchain4j:
   open-ai:
     chat-model:
+      api-key: ${DASHSCOPE_API_KEY:}
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
       model-name: qwen3.6-35b-a3b
     streaming-chat-model:
+      api-key: ${DASHSCOPE_API_KEY:}
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
       model-name: qwen3.6-35b-a3b

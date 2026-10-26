@@ -13,8 +13,9 @@ target/
 .DS_Store
 Thumbs.db
 
-# Local ONNX model files (too large for GitHub, > 100MB single-file limit)
-# 用 scripts/download-reranker.sh 获取，不要提交进仓库
+# Local Reranker model files (not tracked; see model/bge-reranker-model/README.md for download)
+# .onnx ~570MB exceeds GitHub's 100MB single-file limit; tokenizer.json ~17MB excluded for consistency
+# 也可用 scripts/download-reranker.sh 获取
 src/main/resources/model/bge-reranker-model/*.onnx
 src/main/resources/model/bge-reranker-model/tokenizer.json
 

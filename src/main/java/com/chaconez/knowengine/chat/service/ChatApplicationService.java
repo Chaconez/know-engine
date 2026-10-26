@@ -34,10 +34,10 @@ import dev.langchain4j.model.input.PromptTemplate;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
-import dev.langchain4j.model.scoring.onnx.OnnxScoringModel;
 import dev.langchain4j.rag.DefaultRetrievalAugmentor;
 import dev.langchain4j.rag.RetrievalAugmentor;
 import dev.langchain4j.rag.content.aggregator.ContentAggregator;
+import dev.langchain4j.rag.content.aggregator.DefaultContentAggregator;
 import dev.langchain4j.rag.content.injector.ContentInjector;
 import dev.langchain4j.rag.content.injector.DefaultContentInjector;
 import dev.langchain4j.service.AiServices;
@@ -74,6 +74,16 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 @Service
 @Slf4j
 public class ChatApplicationService {
+
+    /**
+     * 重排序最低分阈值。
+     * <p>
+     * BGE-Reranker-v2-m3 输出的是未归一化的 logits（实测命中文档落在 1~4，弱相关可能接近 0 或为负），
+     * 并不是 0~1 的概率。阈值设为正数会连带丢掉部分正确命中，表现为「检索有结果但回答称没有相关资料」。
+     * 默认取 0（只剔除负相关），最终条数由 maxResults 控制。
+     */
+    @Value("${know-engine.rag.reranker-min-score:0.0}")
+    private double rerankerMinScore;
 
     @Autowired
     private QaCacheService qaCacheService;
@@ -132,15 +142,30 @@ public class ChatApplicationService {
     private String chatModelBaseUrl;
 
     /**
-     * 会话标题生成使用的模型名。
+     * RAG 回答生成专用模型名。
      * <p>
-     * 原实现硬编码为 {@code qwen3.5-flash}（DashScope 云端模型），在本地 Ollama 端点下会
-     * 直接 404（{@code model 'qwen3.5-flash' not found}），标题始终停留在临时标题。
-     * 这里改为可配置：默认跟随主对话模型，需要更快时可单独指定轻量模型
-     * （如 {@code know-engine.chat.title-model=qwen2.5:7b}）。
+     * 原先硬编码为 {@code qwen3.6-plus}——那是云端 DashScope 的模型名，
+     * 但 {@code langchain4j.open-ai.chat-model.base-url} 实际指向本机 Ollama，
+     * Ollama 上并不存在该模型，于是每次流式回答都抛
+     * {@code ModelNotFoundException: model 'qwen3.6-plus' not found}，
+     * 表现为「检索和 SQL 生成都正常，最后一步生成回答时断流」。
+     * <p>
+     * 改为跟随 {@code langchain4j.open-ai.chat-model.model-name}
+     * （即 {@code ${OLLAMA_CHAT_MODEL:qwen3.8:27b-mlx}}），
+     * 需要单独指定时用 {@code know-engine.rag.chat-model} 覆盖。
      */
-    @Value("${know-engine.chat.title-model:${langchain4j.open-ai.chat-model.model-name}}")
-    private String titleModelName;
+    @Value("${know-engine.rag.chat-model:${langchain4j.open-ai.chat-model.model-name}}")
+    private String ragChatModelName;
+
+    /**
+     * 会话标题生成模型名（轻任务）。
+     * <p>
+     * 原先硬编码为 {@code qwen3.5-flash}，同样在 Ollama 上不存在，
+     * 导致每次新会话的异步标题生成都失败、只能保留前 20 字的临时标题
+     * （日志里是一行 WARN，容易被忽略）。
+     */
+    @Value("${know-engine.title.chat-model:${langchain4j.open-ai.chat-model.model-name}}")
+    private String titleChatModelName;
 
     @Value("classpath:prompts/text-to-sql-prompt.txt")
     private Resource textToSqlPrompt;
@@ -161,13 +186,13 @@ public class ChatApplicationService {
         ragChatModel = OpenAiStreamingChatModel.builder()
                 .apiKey(chatModelApiKey)
                 .baseUrl(chatModelBaseUrl)
-                .modelName("qwen3.6-plus")
-                .logRequests(true)
+                .modelName(ragChatModelName)
                 .logRequests(true)
                 .temperature(0.2)
                 .topP(0.9)
                 .customParameters(Map.of("enable_thinking", false))
                 .build();
+        log.info("[RAG_CHAT_MODEL] 回答生成模型已初始化: model={}, baseUrl={}", ragChatModelName, chatModelBaseUrl);
 
         intentRecognitionService = AiServices.builder(IntentRecognitionService.class).chatModel(chatModel)
                 .chatMemoryProvider(memoryId -> MessageWindowChatMemory.builder().id(memoryId).maxMessages(10).chatMemoryStore(databaseChatMemoryStore).build()).build();
@@ -186,6 +211,21 @@ public class ChatApplicationService {
      * @return 包含进度消息、[DONE] 事件及 LLM token 的 SSE 流
      */
     public Flux<String> chat(String userId, String content, String conversationId, ChatSource chatSource) {
+        return chat(userId, content, conversationId, chatSource, null, null);
+    }
+
+    /**
+     * 统一流式对话入口（支持卡片回传的车辆上下文）。
+     * <p>
+     * 在原有四参数基础上增加 myCarId 与 carInfoId：前端点击「请先选择车辆」「请先选择车型」
+     * 卡片后会把所选车辆/车型随下一次提问带回，由 {@link #bindSelectedVehicle} 回填到意图识别结果，
+     * 否则 entities.car_id 始终为空，售后/技术类问题会反复弹卡片。
+     *
+     * @param myCarId   my_car.car_id（我的车辆卡片回传）
+     * @param carInfoId car_info.info_id（车型卡片回传）
+     */
+    public Flux<String> chat(String userId, String content, String conversationId, ChatSource chatSource,
+                             String myCarId, String carInfoId) {
         // 1. 处理会话：没有 conversationId 则创建新会话
         final String finalConversationId;
         if (conversationId == null || conversationId.isBlank()) {
@@ -198,7 +238,7 @@ public class ChatApplicationService {
                 try {
                     OpenAiChatModel titleChatModel = OpenAiChatModel.builder()
                             .apiKey(chatModelApiKey)
-                            .modelName(titleModelName)
+                            .modelName(titleChatModelName)
                             .temperature(0.7)
                             .baseUrl(chatModelBaseUrl)
                             .customParameters(Map.of("enable_thinking", false))
@@ -226,9 +266,20 @@ public class ChatApplicationService {
                 .concatWith(
                         Mono.fromCallable(() -> intentRecognitionService.chat(finalConversationId, content))
                                 .subscribeOn(Schedulers.boundedElastic())
-                                .flatMapMany(intentRecognitionResult -> {
+                                .flatMapMany(rawIntentResult -> {
+                                    // 卡片回传的车辆/车型优先于模型抽取结果：用户已经选过车，不该再问一遍
+                                    IntentRecognitionResult intentRecognitionResult =
+                                            bindSelectedVehicle(rawIntentResult, myCarId, carInfoId, userId);
+
                                     // 意图识别完成后清除缓存，避免意图识别的AI响应污染后续RAG对话的历史记忆
                                     databaseChatMemoryStore.evictCache(finalConversationId);
+
+                                    // 卡片触发条件强依赖意图与实体，落一条日志便于排查「为什么没弹卡片」
+                                    log.info("[意图] related={}, intent={}, car_model={}, car_id={}",
+                                            intentRecognitionResult.related(),
+                                            intentRecognitionResult.intent(),
+                                            intentRecognitionResult.entities() == null ? null : intentRecognitionResult.entities().car_model(),
+                                            intentRecognitionResult.entities() == null ? null : intentRecognitionResult.entities().car_id());
 
                                     // 4. 如果用户问题不相关，使用一个通用的LLM做对话
                                     if (!intentRecognitionResult.related()) {
@@ -291,14 +342,17 @@ public class ChatApplicationService {
          * 只有用户通过网页端访问时，才需要车辆信息
          */
         if(chatParam.chatSource() == ChatSource.USER_WEB){
-            // 如果是维保服务、技术支持，则需要车辆信息
+            // 维保服务、技术支持：名下有车且唯一时已在 bindSelectedVehicle 自动绑定；
+            // 只有多台车需要用户指定。没有绑定车辆也不再阻断问答——
+            // 保养价格、三包政策、功能操作这类问题本身不依赖车辆档案，
+            // 而系统没有"添加车辆"入口，硬拦会让所有账号都问不出东西。
             if (intent == KnowEngineIntent.CAR_MAINTENANCE
                     || intent == KnowEngineIntent.CAR_TECH_SUPPORT) {
                 if (chatParam.intentRecognitionResult().entities().car_id() == null) {
                     List<MyCar> myCars = myCarService.getCarByUserId(chatParam.userId());
                     if (CollectionUtils.isEmpty(myCars)) {
-                        return Flux.just("[WARN]:您还没有添加车辆信息，请先添加车辆信息");
-                    } else if (myCars.size() >= 1) {
+                        log.info("当前账号未绑定车辆，按无车辆上下文继续知识问答: userId={}", chatParam.userId());
+                    } else if (myCars.size() > 1) {
                         return Flux.just("[CARD]:请先选择车辆")
                                 .concatWith(Flux.just("[CARD_CHOICE_MYCAR]:" + JSON.toJSONString(MyCarConverter.INSTANCE.toVOList(myCars))));
                     }
@@ -309,8 +363,13 @@ public class ChatApplicationService {
             if (intent == KnowEngineIntent.CAR_MARKETING) {
                 if (chatParam.intentRecognitionResult().entities().car_model() == null) {
                     List<CarInfo> carInfoList = carInfoService.getCarInfoByBrand(null);
-                    return Flux.just("[CARD]:请先选择您要咨询的车辆")
-                            .concatWith(Flux.just("[CARD_CHOICE_CAR]:" + JSON.toJSONString(CarInfoConverter.INSTANCE.toVOList(carInfoList))));
+                    // 车型库为空时必须跳过卡片：返回空数组的卡片前端没有任何可选项，
+                    // 用户会卡在「请选择车辆」上再也问不出内容
+                    if (!CollectionUtils.isEmpty(carInfoList)) {
+                        return Flux.just("[CARD]:请先选择您要咨询的车辆")
+                                .concatWith(Flux.just("[CARD_CHOICE_CAR]:" + JSON.toJSONString(CarInfoConverter.INSTANCE.toVOList(carInfoList))));
+                    }
+                    log.info("车型库为空，跳过车型选择卡片，继续通用知识问答");
                 }
             }
         }
@@ -397,19 +456,23 @@ public class ChatApplicationService {
                         log.warn("Error creating Neo4j retriever", e);
                     }
 
-                    OnnxScoringModel scoringModel = BgeScoringModel.getInstance();
+                    // 本地 Reranker 为可选项：模型文件缺失时降级为仅 RRF 融合，不阻断问答链路
+                    ContentAggregator unstructuredAggregator;
+                    if (BgeScoringModel.isAvailable()) {
+                        unstructuredAggregator = KnowEngineReRankingContentAggregator.builder()
+                                .scoringModel(BgeScoringModel.getInstance())
+                                .minScore(rerankerMinScore)
+                                .maxResults(5)
+                                .querySelector(queryToContents -> queryToContents.keySet().iterator().next())
+                                .build();
+                    } else {
+                        unstructuredAggregator = new DefaultContentAggregator();
+                    }
 
                     // 使用带进度通知的聚合器包装原始聚合器
                     // 混合聚合器：SQL/Cypher 结构化结果直接透传，仅对向量/全文检索结果做 RRF 融合和重排序
                     ContentAggregator contentAggregator = new ProgressAwareContentAggregator(
-                            new KnowEngineHybridContentAggregator(
-                                    KnowEngineReRankingContentAggregator.builder()
-                                            .scoringModel(scoringModel)
-                                            .minScore(0.6)
-                                            .maxResults(5)
-                                            .querySelector(queryToContents -> queryToContents.keySet().iterator().next())
-                                            .build()
-                            ),
+                            new KnowEngineHybridContentAggregator(unstructuredAggregator),
                             processCallback, chatParam.assistantMessageId(), chatMessageService
                     );
 
@@ -459,6 +522,85 @@ public class ChatApplicationService {
                 // publishOn 引入异步边界：boundedElastic 线程专用于执行阻塞 RAG 操作，
                 // parallel 线程独立运行 drain loop，确保进度消息能及时推送到前端 SSE 响应
                 .publishOn(Schedulers.parallel());
+    }
+
+    /**
+     * 将前端卡片回传的车辆/车型回填到意图识别结果。
+     * <p>
+     * 前端点击「请先选择车辆」「请先选择车型」卡片后，会带上 myCarId（my_car.car_id）与
+     * carId（car_info.info_id）重新提问。若不回填，entities.car_id 恒为空，
+     * 售后维修/技术指导类问题会反复弹卡片，形成死循环。
+     * <p>
+     * 出于水平权限考虑，myCarId 必须通过车辆归属校验才会被采纳，
+     * 伪造他人车辆编号不会生效（最多按 VISITOR 权限继续对话）。
+     * <p>
+     * 另外，售后/技术类意图下若账号名下只有一台车，直接自动绑定，不再弹卡片。
+     */
+    private IntentRecognitionResult bindSelectedVehicle(IntentRecognitionResult result,
+                                                        String myCarId, String carInfoId, String userId) {
+        if (result == null || result.entities() == null) {
+            return result;
+        }
+        IntentRecognitionResult.Entities entities = result.entities();
+        String carId = entities.car_id();
+        String carModel = entities.car_model();
+        boolean changed = false;
+
+        // 我的车辆卡片：校验归属后回填 car_id
+        if (isBlank(carId) && !isBlank(myCarId)) {
+            MyCar myCar = myCarService.getCarByUser(myCarId, userId);
+            if (myCar != null) {
+                carId = myCar.getCarId();
+                if (isBlank(carModel)) {
+                    carModel = myCar.getFullName();
+                }
+                changed = true;
+            } else {
+                log.warn("前端回传的车辆不属于当前用户，已忽略: myCarId={}, userId={}", myCarId, userId);
+            }
+        }
+
+        // 车型卡片：回填 car_model
+        if (isBlank(carModel) && !isBlank(carInfoId)) {
+            CarInfo carInfo = carInfoService.getCarInfoById(carInfoId);
+            if (carInfo != null) {
+                carModel = carInfo.getFullName();
+                changed = true;
+            }
+        }
+
+        // 名下只有一台车时自动绑定：唯一选项没有"选择"的意义，
+        // 否则用户每次问保养/技术问题都要先点一次卡片（且历史版本点了也没用）
+        if (!changed && isBlank(carId) && result.related()) {
+            KnowEngineIntent intent = KnowEngineIntent.getIntent(result);
+            if (intent == KnowEngineIntent.CAR_MAINTENANCE
+                    || intent == KnowEngineIntent.CAR_TECH_SUPPORT) {
+                List<MyCar> myCars = myCarService.getCarByUserId(userId);
+                if (myCars != null && myCars.size() == 1) {
+                    MyCar onlyCar = myCars.get(0);
+                    carId = onlyCar.getCarId();
+                    if (isBlank(carModel)) {
+                        carModel = onlyCar.getFullName();
+                    }
+                    changed = true;
+                    log.info("用户名下仅一台车，自动绑定: carId={}, userId={}", carId, userId);
+                }
+            }
+        }
+
+        if (!changed) {
+            return result;
+        }
+
+        log.info("已回填卡片选择的车辆上下文: carId={}, carModel={}, userId={}", carId, carModel, userId);
+        return new IntentRecognitionResult(result.reasoning(), result.related(), result.intent(),
+                new IntentRecognitionResult.Entities(carModel, carId, entities.order_id(), entities.dealer(),
+                        entities.fault_description(), entities.appointment_time(),
+                        entities.part_name(), entities.function_name()));
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     /**

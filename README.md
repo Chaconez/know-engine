@@ -95,9 +95,9 @@
   ┌──────────┐    ┌──────────────┐    ┌──────────────────────┐    ┌──────────────┐    ┌──────────────┐
   │ 文件上传   │    │ 格式转换      │    │ 智能切片               │    │ 向量化嵌入     │    │ ES 索引存储   │
   │          │    │              │    │                      │    │              │    │              │
-  │ · PDF    │    │ · MinerU     │    │ DocumentSplitter     │    │ text-         │    │ · KNN 索引   │
-  │ · Word   │───▶│   深度解析    │───▶│   Factory            │───▶│ embedding-   │───▶│ · 全文索引   │
-  │ · Excel  │    │ · Word→MD   │    │                      │    │   v4 (1536d) │    │ · 混合索引   │
+  │ · PDF    │    │ · MinerU     │    │ DocumentSplitter     │    │ bge-m3       │    │ · KNN 索引   │
+  │ · Word   │───▶│   深度解析    │───▶│   Factory            │───▶│ (Ollama      │───▶│ · 全文索引   │
+  │ · Excel  │    │ · Word→MD   │    │                      │    │  1024d)      │    │ · 混合索引   │
   │ · MD/TXT │    │ · Excel直通  │    │ · TITLE  → Parent   │    │              │    │              │
   │ · CSV    │    │ · Tika 类型  │    │ · SMART  → Auto     │    │ 跳过:         │    │              │
   │          │    │   检测       │    │ · LENGTH → ByWord   │    │ skipEmbedding │    │              │
@@ -201,7 +201,7 @@
 - **SSE 实时推送**：基于 Reactor `Flux` 的全链路流式输出，Token 级逐字推送
 - **进度可见**：RAG 管道每个环节（意图识别 → 问题改写 → 问题路由 → 排序筛选 → 生成回答）均向前端推送 `[PROGRESS]` 事件，消除等待焦虑
 - **RAG 引用溯源**：检索结果携带文档来源、分片内容、Rerank 分数，支持可解释性审查
-- **异步标题生成**：新对话自动以 Java 21 虚拟线程 + qwen3.5-flash 轻量模型异步生成摘要标题，不阻塞首 Token 延迟；失败时保留临时标题，保障主流程不受影响
+- **异步标题生成**：新对话自动以 Java 21 虚拟线程 + 本地 Ollama 模型（`know-engine.title.chat-model`）异步生成摘要标题，不阻塞首 Token 延迟；失败时保留临时标题，保障主流程不受影响
 - **交互卡片输出**：SSE 流式响应中支持 `[CARD]` 结构化卡片事件，将车型对比、订单详情、召回信息等结构化数据以卡片形式呈现。LLM 通过 Prompt 引导在特定场景输出结构化 JSON 标记，后端解析后转换为 `[CARD]` 事件，前端根据卡片类型（`vehicle_info` / `order_detail` / `recall_notice` / `comparison_table`）渲染对应 UI 组件，支持点击展开详情、跳转链接等交互操作
 - **钉钉机器人接入**：接入钉钉机器人，支持单聊和群聊 @机器人两种模式。钉钉消息回调经签名验证后转换为 KnowEngine 统一对话接口调用，流式收集完整回复后通过钉钉 API 回复；群聊模式自动识别 @内容 作为用户问题
 
@@ -287,10 +287,10 @@ Markdown 文档中的表格和图片在被 `chunkSize` 二次切割时面临语�
 
 ### 🔥 虚拟线程 + 轻量模型 — 异步标题生成零延迟
 
-新会话首条消息发出后，系统通过 `Thread.ofVirtual().name("title-summary-" + conversationId).start(...)` 启动 Java 21 虚拟线程，异步调用轻量模型生成对话标题并回写数据库。关键设计：
+新会话首条消息发出后，系统通过 `Thread.ofVirtual().name("title-summary-" + conversationId).start(...)` 启动 Java 21 虚拟线程，异步调用本地 Ollama 模型（`know-engine.title.chat-model`）生成对话标题并回写数据库。关键设计：
 - **零阻塞**：虚拟线程不占用平台线程，不阻塞 SSE 流式响应的首 Token 输出
-- **模型可配置**：`know-engine.chat.title-model` 单独指定标题生成模型（默认跟随主对话模型），本地部署时指向 `qwen2.5:7b` 之类的轻量模型，避免为了取标题把大模型重新载入显存
-- **关闭思考模式**：通过 `customParameters(Map.of("enable_thinking", false))` 关闭 CoT 思考过程，进一步降低延迟
+- **模型选型**：标题生成任务对推理能力要求低，可用 `know-engine.title.chat-model` 单独指向更小的本地模型，进一步降低延迟
+- **关闭思考模式**：通过 `customParameters(Map.of("enable_thinking", false))` 关闭思考型模型的 CoT 过程，进一步降低延迟
 - **优雅降级**：标题生成失败时保留临时标题，不影响对话功能
 
 ### 🔥 意图识别 — LLM Structured Output 约束
@@ -348,14 +348,15 @@ Excel/CSV 类型文档则独立走 `ExcelSplitter` 处理，不经过工厂模�
 |---------------|-------------------------------------------|-------------------------|
 | **语言/框架**     | Java 21 + Spring Boot 3.5                 | 虚拟线程、Record 模式匹配        |
 | **AI 框架**     | LangChain4j 1.11.0                        | RAG 管道、AI Services、流式对话 |
-| **LLM**       | qwen-max-latest、qwen3.5-flash            | 意图识别、查询改写、路由决策、流式生成     |
+| **LLM**       | Ollama qwen3.8:27b-mlx（本地）              | 意图识别、查询改写、路由决策、流式生成     |
+| **多模态**      | Ollama qwen2.5vl:7b（本地）                 | 文档图片描述                     |
 | **向量存储**      | Elasticsearch                             | KNN / 全文 / 混合检索         |
 | **图数据库**      | Neo4j + APOC                              | Text2Cypher 实体关系查询      |
 | **关系数据库**     | MySQL + MyBatis-Plus                      | 业务数据 + Text2SQL 结构化查询   |
 | **对象存储**      | MinIO                                     | 文档文件存储                  |
 | **缓存**        | Redis + Redisson                          | 分布式锁、父分段缓存              |
 | **Reranking** | BGE-RERANKER (ONNX Runtime)               | 进程内本地推理，零网络开销           |
-| **Embedding** | text-embedding-v4 (通义)                    | 1536 维向量                |
+| **Embedding** | Ollama bge-m3（本地）                        | 1024 维向量                 |
 | **文件解析**      | MinerU (PDF)、Apache Tika (类型检测)、EasyExcel | 多格式文档解析                 |
 | **任务调度**      | XXL-Job 2.4                               | 补偿任务定时触发                |
 | **响应式**       | Project Reactor                           | SSE 流式推送、非阻塞调度          |
@@ -431,7 +432,11 @@ know-engine/
 
 | 环境变量 | 说明 | 默认值 |
 |---------|------|--------|
-| `DASHSCOPE_API_KEY` | LLM API Key（DashScope / OpenAI 兼容端点） | 空，必填 |
+| `OLLAMA_BASE_URL` | 本地 Ollama OpenAI 兼容端点（全部模型均走此端点） | `http://localhost:11434` |
+| `OLLAMA_API_KEY` | Ollama 不校验 Key，填任意非空值即可 | `ollama` |
+| `OLLAMA_CHAT_MODEL` | 本地对话模型（意图识别、改写、路由、RAG 生成、标题） | `qwen3.8:27b-mlx` |
+| `OLLAMA_EMBEDDING_MODEL` | 本地 embedding 模型 | `bge-m3` |
+| `OLLAMA_VISION_MODEL` | 本地多模态视觉模型（文档图片描述） | `qwen2.5vl:7b` |
 | `MYSQL_HOST` / `MYSQL_USERNAME` / `MYSQL_PASSWORD` | MySQL 连接 | `localhost` / `root` / 空 |
 | `REDIS_HOST` / `REDIS_PASSWORD` | Redis 连接 | `localhost` / 空 |
 | `NEO4J_URI` / `NEO4J_USERNAME` / `NEO4J_PASSWORD` | Neo4j 连接 | `bolt://localhost:7687` / `neo4j` / `password` |
@@ -445,7 +450,20 @@ know-engine/
 1. 配置环境变量（或直接修改 `application.yml`）
 2. 执行 `src/main/resources/sql/tables.sql` 初始化数据库表
 
-### 本地 Reranker 模型（可选，但推荐）
+### 本地模型准备（必需）
+
+项目所有模型均通过本地 Ollama 的 OpenAI 兼容端点调用（默认 `http://localhost:11434/v1`），不依赖任何云端大模型服务。启动前先拉取：
+
+```bash
+ollama pull qwen3.8:27b-mlx   # 主对话：意图识别、查询改写、路由、RAG 生成、会话标题
+ollama pull bge-m3            # embedding：1024 维
+ollama pull qwen2.5vl:7b      # 多模态：文档图片描述
+```
+
+如需换模型，用 `OLLAMA_CHAT_MODEL` / `OLLAMA_EMBEDDING_MODEL` / `OLLAMA_VISION_MODEL` 覆盖即可；也可按用途在 `application.yml` 的 `know-engine.rag/title/vision.chat-model` 单独指定。
+注意：**更换 embedding 模型后向量维度可能变化，必须重建 ES 索引并重新向量化**。
+
+### 本地 Reranker 模型（可选）
 
 仓库不含模型文件（`model_quantized.onnx` 约 544MB，超出 GitHub 单文件 100MB 限制）。一条命令自动下载到正确位置：
 

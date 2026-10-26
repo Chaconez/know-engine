@@ -245,6 +245,54 @@ public class RagModuleController {
         return ((UserMessage) contentInjector.inject(testContents, new UserMessage(query))).singleText();
     }
 
+    @GetMapping("debugRetriever")
+    public String debugRetriever(String query) {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+
+        KnowEngineElasticsearchContentRetriever knnRetriever = KnowEngineElasticsearchContentRetriever.builder()
+                .restClient(restClient)
+                .embeddingModel(openAiEmbeddingModel)
+                .configuration(ElasticsearchConfigurationKnn.builder().build())
+                .maxResults(MAX_RESULT)
+                .indexName(INDEX_NAME)
+                .minScore(MIN_SCORE)
+                .knowledgeSegmentService(knowledgeSegmentService)
+                .build();
+
+        KnowEngineElasticsearchContentRetriever fullTextRetriever = KnowEngineElasticsearchContentRetriever.builder()
+                .restClient(restClient)
+                .embeddingModel(openAiEmbeddingModel)
+                .configuration(ElasticsearchConfigurationFullText.builder().build())
+                .maxResults(MAX_RESULT)
+                .indexName(INDEX_NAME)
+                .knowledgeSegmentService(knowledgeSegmentService)
+                .build();
+
+        try {
+            result.put("knn", describe(knnRetriever.retrieve(new Query(query))));
+        } catch (Exception e) {
+            result.put("knn", "ERROR: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+        }
+        try {
+            result.put("fullText", describe(fullTextRetriever.retrieve(new Query(query))));
+        } catch (Exception e) {
+            result.put("fullText", "ERROR: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+        }
+        return JSON.toJSONString(result);
+    }
+
+    private List<Map<String, Object>> describe(List<Content> contents) {
+        return contents.stream().map(c -> {
+            Map<String, Object> m = new java.util.LinkedHashMap<>();
+            String text = c.textSegment().text();
+            m.put("score", c.metadata().get(ContentMetadata.SCORE));
+            m.put("fileName", c.textSegment().metadata().getString("fileName"));
+            m.put("chunkId", c.textSegment().metadata().getString("chunkId"));
+            m.put("text", text.substring(0, Math.min(90, text.length())));
+            return m;
+        }).collect(Collectors.toList());
+    }
+
     @GetMapping("testReranker")
     public String testReranker(String query) {
         if (query == null || query.isBlank()) {

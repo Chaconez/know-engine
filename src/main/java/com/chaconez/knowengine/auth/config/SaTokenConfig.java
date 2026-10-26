@@ -32,9 +32,12 @@ public class SaTokenConfig implements WebMvcConfigurer {
                     .notMatch("/auth/**")
                     .notMatch("/dingtalk/**")
                     .notMatch("/druid/**")
-                    // 根路径放行：没有扩展名，isStaticResource() 认不出来，会被误判为接口而抛
-                    // NotLoginException（表现为打开首页直接 500）。这里交给 index.html 做跳转。
+                    // 根路径与欢迎页：本身就是跳转登录页的入口，若要求登录态会导致访问 / 直接 500
+                    // （isStaticResource() 靠扩展名判断，"/" 无扩展名，会被误判为需鉴权的业务接口）
                     .notMatch("/")
+                    .notMatch("/index.html")
+                    // 健康检查端点：供容器/网关探活
+                    .notMatch("/health", "/health/**")
                     .check(r -> {
                         if (isStaticResource()) return;
                         StpUtil.checkLogin();

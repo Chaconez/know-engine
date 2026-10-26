@@ -59,8 +59,9 @@ public class KnowledgeSegmentServiceImpl extends ServiceImpl<KnowledgeSegmentMap
             stringRedisTemplate.opsForValue().set(chunkId.toString(), segment.getText(), 30, TimeUnit.SECONDS);
             return segment.getText();
         } else {
-            // 缓存空值，避免缓存击穿，重复查询数据库
-            stringRedisTemplate.opsForValue().set(chunkId.toString(), "");
+            // 缓存空值防止缓存击穿，但必须带过期时间：
+            // 若永久缓存空串，父分段后续入库或 Redis 抖动都会导致该类分段永远取不到文本
+            stringRedisTemplate.opsForValue().set(chunkId.toString(), "", 30, TimeUnit.SECONDS);
         }
 
         return null;

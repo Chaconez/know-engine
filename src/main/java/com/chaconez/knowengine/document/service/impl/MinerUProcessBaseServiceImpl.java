@@ -373,6 +373,17 @@ public abstract class MinerUProcessBaseServiceImpl implements FileProcessService
     private String chatModelBaseUrl;
 
     /**
+     * 图片描述用的本地多模态视觉模型名。
+     * <p>
+     * 原先硬编码为 {@code qwen3-vl-plus}——那是云端 DashScope 的视觉模型名，
+     * 而 {@code langchain4j.open-ai.chat-model.base-url} 指向本机 Ollama，
+     * Ollama 上并不存在该模型，图片描述必然抛 {@code ModelNotFoundException}。
+     * 改为读取 {@code know-engine.vision.chat-model}（默认本地 qwen2.5vl:7b）。
+     */
+    @Value("${know-engine.vision.chat-model:${langchain4j.open-ai.chat-model.model-name}}")
+    private String visionChatModelName;
+
+    /**
      * 生成图片描述
      * 需要注意的是，如果你用的是外部的模型，这个url需要是公网可以访问的url。否则模型需要能和MinIO进行内网通信。
      */
@@ -380,7 +391,7 @@ public abstract class MinerUProcessBaseServiceImpl implements FileProcessService
         OpenAiChatModel chatModel = OpenAiChatModel.builder()
                 .apiKey(chatModelApiKey)
                 .baseUrl(chatModelBaseUrl)
-                .modelName("qwen3-vl-plus")
+                .modelName(visionChatModelName)
                 .temperature(0.7)
                 .logResponses(true)
                 .logRequests(true)

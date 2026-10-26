@@ -19,7 +19,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <!-- LLM API Key 不入库：运行时通过环境变量 DASHSCOPE_API_KEY 注入，见 README 配置说明 -->
+        <!-- 全部模型走本地 Ollama，无 API Key 入库；端点与模型名通过 OLLAMA_* 环境变量覆盖，见 README 配置说明 -->
     </properties>
 
     <dependencies>
@@ -339,5 +339,36 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!--
+          生产打包：排除本地 Reranker 模型（model_quantized.onnx ~570MB + tokenizer.json ~17MB）。
+          部署时通过挂载卷提供模型，并用环境变量 RERANKER_MODEL_PATH / RERANKER_TOKENIZER_PATH
+          指定绝对路径（BgeScoringModel 优先读取环境变量，其次 classpath，都没有则降级为 RRF 融合）。
+          用法：mvn clean package -Pprod -DskipTests
+        -->
+        <profile>
+            <id>prod</id>
+            <build>
+                <plugins>
+                    <!--
+                      在 jar 插件层排除，而非 build/resources：
+                      Maven 对 profile 中的 resources 是追加合并，主配置的 include 仍会把模型带进来；
+                      这里排除的是 target/classes 内容进入 jar 的部分，本地 target/classes 仍保留模型，
+                      因此 IDE 直接运行的 classpath 兜底不受影响。
+                    -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>model/**</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>

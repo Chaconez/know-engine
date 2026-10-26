@@ -931,10 +931,16 @@
             messageElement.querySelector('.message-content').append(box);
         }
 
+        // 最近一次提问：卡片只是补充车辆上下文，点击卡片后要复用这句原文重新提问，
+        // 否则用户的问题会被"我的车辆是：xxx"覆盖掉
+        let pendingUserQuestion = '';
+
         // 发送消息
         async function sendMessage(extraParams) {
             const content = messageInput.value.trim();
             if (!content || isStreaming) return;
+
+            pendingUserQuestion = content;
 
             // 显示用户消息
             appendMessage('user', content);
@@ -1372,14 +1378,16 @@
         function handleMyCarSelect(carId, infoId, carName, plateNumber) {
             if (isStreaming) return;
             const desc = plateNumber ? `${carName}（${plateNumber}）` : carName;
-            messageInput.value = `我的车辆是：${desc}`;
+            // 复用触发卡片时的原始问题，车辆信息通过 myCarId 传给后端，不覆盖问题本身
+            messageInput.value = pendingUserQuestion || `我的车辆是：${desc}`;
             sendMessage({ myCarId: carId, carId: infoId});
         }
 
         // 处理用户选择咨询的车型
         function handleCarInfoSelect(infoId, carName) {
             if (isStreaming) return;
-            messageInput.value = `我想咨询的车辆是：${carName}`;
+            // 同上：保留原问题，车型通过 carId 传给后端
+            messageInput.value = pendingUserQuestion || `我想咨询的车辆是：${carName}`;
             sendMessage({ carId: infoId });
         }
 
